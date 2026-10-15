@@ -2,10 +2,13 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, String, create_engine, select
+from sqlalchemy import JSON, DateTime, String, Uuid, create_engine, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+_JSON = JSON().with_variant(JSONB(), "postgresql")
 
 
 class Base(DeclarativeBase):
@@ -15,16 +18,16 @@ class Base(DeclarativeBase):
 class RunRow(Base):
     __tablename__ = "runs"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
     status: Mapped[str] = mapped_column(String(16))
     label_a: Mapped[str] = mapped_column(String(100))
     label_b: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
-    files_a: Mapped[dict[str, str]] = mapped_column(JSON)
-    files_b: Mapped[dict[str, str]] = mapped_column(JSON)
-    result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    files_a: Mapped[dict[str, str]] = mapped_column(_JSON)
+    files_b: Mapped[dict[str, str]] = mapped_column(_JSON)
+    result: Mapped[dict[str, Any] | None] = mapped_column(_JSON, nullable=True)
 
 
 def make_engine(database_url: str | None) -> Engine:
@@ -73,6 +76,10 @@ class RunStore:
             row.status, row.error_code, row.finished_at = "failed", error_code, datetime.now(UTC)
 
     def get(self, run_id: str) -> RunRow | None:
+        try:
+            run_id = str(uuid.UUID(run_id))
+        except ValueError:
+            return None
         with self._sessions() as s:
             return s.get(RunRow, run_id)
 
