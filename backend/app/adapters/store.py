@@ -83,6 +83,12 @@ class RunStore:
         with self._sessions() as s:
             return s.get(RunRow, run_id)
 
+    def delete(self, run_id: str) -> None:
+        with self._sessions.begin() as s:
+            row = s.get(RunRow, run_id)
+            if row is not None:
+                s.delete(row)
+
     def list(self, limit: int = 50) -> list[RunRow]:
         with self._sessions() as s:
             q = select(RunRow).order_by(RunRow.created_at.desc()).limit(limit)

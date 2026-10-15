@@ -3,6 +3,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
+from app.adapters.store import RunStore, make_engine
 from app.config import Settings
 from app.main import create_app
 
@@ -12,6 +13,17 @@ pytestmark = pytest.mark.skipif(not URL, reason="SPECTRACE_TEST_DATABASE_URL not
 
 def make_client() -> TestClient:
     return TestClient(create_app(Settings(_env_file=None, database_url=URL)))
+
+
+@pytest.fixture(autouse=True)
+def remove_rows_created_by_the_test():
+    """The target may be the hosted project, so every row a test adds is deleted afterwards."""
+    store = RunStore(make_engine(URL))
+    before = {r.id for r in store.list(limit=1000)}
+    yield
+    for row in store.list(limit=1000):
+        if row.id not in before:
+            store.delete(row.id)
 
 
 def test_run_round_trip_and_survives_a_new_app_instance(v1, v2):
