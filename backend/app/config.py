@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     database_url: str | None = None
     cors_origins: list[str] = ["http://localhost:3000"]
     max_request_bytes: int = 12_000_000
+    rate_limit_per_minute: int = 120
+    rate_limit_heavy_per_minute: int = 10
+    # Only enable behind a proxy you control (Render): the client IP is then read from the
+    # last X-Forwarded-For entry, which that proxy appended. Otherwise clients could spoof it.
+    trust_proxy_headers: bool = False
 
     @field_validator("database_url")
     @classmethod
