@@ -60,3 +60,54 @@ def test_oversized_request_rejected_before_parsing(v1, v2):
 def test_oversized_file_is_413(v1):
     r = client().post("/v1/runs", json=payload({"a.md": "x" * 1_000_001}, v1))
     assert r.status_code == 413
+
+
+def _run_id(c, v1, v2):
+    return c.post("/v1/runs", json=payload(v1, v2)).json()["id"]
+
+
+def test_snippet_returns_cited_line_with_context(v1, v2):
+    c = client()
+    rid = _run_id(c, v1, v2)
+    r = c.get(
+        f"/v1/runs/{rid}/snippet", params={"version": "b", "file": "docs/guide.md", "line": 4}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert [x["n"] for x in body["lines"]] == [2, 3, 4, 5, 6]
+    assert "GET /pets" in next(x["text"] for x in body["lines"] if x["n"] == 4)
+
+
+def test_snippet_clamps_at_file_edges_and_honours_context_zero(v1, v2):
+    c = client()
+    rid = _run_id(c, v1, v2)
+    top = c.get(
+        f"/v1/runs/{rid}/snippet", params={"version": "a", "file": "docs/guide.md", "line": 1}
+    )
+    assert [x["n"] for x in top.json()["lines"]] == [1, 2, 3]
+    one = c.get(
+        f"/v1/runs/{rid}/snippet",
+        params={"version": "a", "file": "docs/guide.md", "line": 4, "context": 0},
+    )
+    assert [x["n"] for x in one.json()["lines"]] == [4]
+
+
+def test_snippet_rejects_unknown_file_traversal_and_bad_lines(v1, v2):
+    c = client()
+    rid = _run_id(c, v1, v2)
+    base = f"/v1/runs/{rid}/snippet"
+    ok = {"version": "b", "line": 1}
+    assert c.get(base, params={**ok, "file": "../../etc/passwd"}).status_code == 404
+    assert c.get(base, params={**ok, "file": "missing.md"}).status_code == 404
+    assert (
+        c.get(base, params={"version": "b", "file": "docs/guide.md", "line": 9999}).status_code
+        == 404
+    )
+    assert (
+        c.get(base, params={"version": "b", "file": "docs/guide.md", "line": 0}).status_code == 422
+    )
+    assert (
+        c.get(base, params={"version": "c", "file": "docs/guide.md", "line": 1}).status_code == 422
+    )
+    assert c.get(base, params={**ok, "file": "docs/guide.md", "context": 99}).status_code == 422
+    assert c.get("/v1/runs/nope/snippet", params={**ok, "file": "docs/guide.md"}).status_code == 404

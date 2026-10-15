@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from app.adapters.store import RunRow, RunStore
@@ -98,3 +98,36 @@ def ask(run_id: str, body: AskRequest, store: Store):
         raise NotFound("run has no result")
     # Analysis is deterministic, so re-running on the stored inputs reproduces the graphs.
     return answer_question(analyze(row.files_a, row.files_b), body.question)
+
+
+MAX_SNIPPET_LINE_CHARS = 400
+
+
+@router.get("/runs/{run_id}/snippet")
+def snippet(
+    run_id: str,
+    store: Store,
+    version: Literal["a", "b"],
+    file: Annotated[str, Query(min_length=1, max_length=300)],
+    line: Annotated[int, Query(ge=1, le=10_000_000)],
+    context: Annotated[int, Query(ge=0, le=10)] = 2,
+):
+    """Source lines around a cited location, for showing evidence next to an impact."""
+    row = _load(store, run_id)
+    files = row.files_a if version == "a" else row.files_b
+    # A dictionary lookup on the stored names, never a filesystem path.
+    text = files.get(file)
+    if text is None:
+        raise NotFound("file not found in this run")
+    lines = text.splitlines()
+    if line > len(lines):
+        raise NotFound("line is outside the file")
+    first, last = max(1, line - context), min(len(lines), line + context)
+    return {
+        "file": file,
+        "version": version,
+        "line": line,
+        "lines": [
+            {"n": n, "text": lines[n - 1][:MAX_SNIPPET_LINE_CHARS]} for n in range(first, last + 1)
+        ],
+    }
