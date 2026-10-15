@@ -1,0 +1,11 @@
+{
+  "id": "c06-unrelated-generic-word",
+  "split": "dev",
+  "description": "An unused schema called Item loses a property. The docs use the everyday word 'item' but never reference the schema.",
+  "changes": {
+    "schema:Item": "breaking"
+  },
+  "impacts": {
+    "schema:Item": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "c10-parameter-type",
+  "split": "heldout",
+  "description": "The limit parameter changes from integer to string. Only the section that names GET /search is affected.",
+  "changes": {
+    "endpoint:GET /search": "breaking"
+  },
+  "impacts": {
+    "endpoint:GET /search": [
+      {
+        "key": "section:docs/search.md#searching",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/search.md",
+          "line": 4,
+          "text": "Call `GET /search` with a `limit` value."
+        }
+      }
+    ]
+  }
+}

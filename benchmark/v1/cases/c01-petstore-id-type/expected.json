@@ -1,0 +1,75 @@
+{
+  "id": "c01-petstore-id-type",
+  "split": "dev",
+  "description": "Pet.id changes from string to integer. Endpoints use Pet by $ref; the guide describes them.",
+  "changes": {
+    "schema:Pet": "breaking"
+  },
+  "impacts": {
+    "schema:Pet": [
+      {
+        "key": "endpoint:GET /pets",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 23,
+          "text": "$ref: \"#/components/schemas/Pet\""
+        }
+      },
+      {
+        "key": "endpoint:POST /pets",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 38,
+          "text": "$ref: \"#/components/schemas/Pet\""
+        }
+      },
+      {
+        "key": "endpoint:GET /pets/{petId}",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 54,
+          "text": "$ref: \"#/components/schemas/Pet\""
+        }
+      },
+      {
+        "key": "section:docs/guide.md#listing-pets",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/guide.md",
+          "line": 4,
+          "text": "Call `GET /pets` to list all pets. Each item is a `Pet`."
+        }
+      },
+      {
+        "key": "section:docs/guide.md#fetching-a-pet",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/guide.md",
+          "line": 7,
+          "text": "Call `GET /pets/{petId}` to fetch one pet."
+        }
+      },
+      {
+        "key": "requirement:REQ-001",
+        "certainty": "inferred",
+        "cite": {
+          "file": "docs/guide.md",
+          "line": 9,
+          "text": "REQ-001: Clients MUST treat the `Pet` id as an opaque string."
+        }
+      },
+      {
+        "key": "example:docs/guide.md#fetching-a-pet:1",
+        "certainty": "inferred",
+        "cite": {
+          "file": "docs/guide.md",
+          "line": 11,
+          "text": "```json"
+        }
+      }
+    ]
+  }
+}

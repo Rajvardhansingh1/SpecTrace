@@ -1,0 +1,21 @@
+{
+  "id": "c02-required-parameter",
+  "split": "dev",
+  "description": "A required query parameter is added to GET /orders. Only the section that names that endpoint is affected.",
+  "changes": {
+    "endpoint:GET /orders": "breaking"
+  },
+  "impacts": {
+    "endpoint:GET /orders": [
+      {
+        "key": "section:docs/orders.md#listing-orders",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/orders.md",
+          "line": 4,
+          "text": "Use `GET /orders` to list orders. Pass the status filter."
+        }
+      }
+    ]
+  }
+}

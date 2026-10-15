@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: Bench
+  version: "1.0.0"
+paths:
+  /ping:
+    get:
+      summary: Ping
+      responses:
+        "200":
+          description: ok
+components:
+  schemas:
+    Status:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean

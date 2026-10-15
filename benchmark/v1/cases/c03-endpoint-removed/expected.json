@@ -1,0 +1,30 @@
+{
+  "id": "c03-endpoint-removed",
+  "split": "dev",
+  "description": "DELETE /pets/{petId} is removed but the docs still describe it. References to a removed endpoint count as impacted.",
+  "changes": {
+    "endpoint:DELETE /pets/{petId}": "breaking"
+  },
+  "impacts": {
+    "endpoint:DELETE /pets/{petId}": [
+      {
+        "key": "section:docs/pets.md#removing-a-pet",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/pets.md",
+          "line": 4,
+          "text": "Call `DELETE /pets/{petId}` to remove a pet. The call returns 204."
+        }
+      },
+      {
+        "key": "requirement:REQ-010",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/pets.md",
+          "line": 6,
+          "text": "REQ-010: Clients MUST call `DELETE /pets/{petId}` before archiving a pet."
+        }
+      }
+    ]
+  }
+}

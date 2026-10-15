@@ -3,7 +3,7 @@
 ## Project identity
 - **Name:** SpecTrace
 - **Purpose:** Version-aware technical documentation retrieval and change-impact analysis.
-- **Status:** `IN DEVELOPMENT — core engine (Plan 1) and run persistence + /v1 API (Plan 2, local) implemented and tested; Supabase schema applied; no frontend, benchmark, GitHub source or deployment yet`
+- **Status:** `IN DEVELOPMENT — core engine (Plan 1) and run persistence + /v1 API (Plan 2, local) implemented and tested; Supabase schema applied; benchmark v1 implemented (Plan 3); no frontend, GitHub source or deployment yet`
 - **Last updated:** 2026-10-16
 - **Source of truth:** Actual repository contents and verified execution results. This file is project memory, not a substitute for code.
 
@@ -135,3 +135,13 @@ flowchart TD
 - Rate limiting (`app/api/ratelimit.py`): sliding window per client IP, 120/min general and 10/min for POST by default; `/health` and CORS preflight exempt; 429 with `rate_limited` envelope and `Retry-After`; tracked keys capped at 10,000. `X-Forwarded-For` is ignored unless `SPECTRACE_TRUST_PROXY_HEADERS=true`. Limits are per process and reset on restart; they are not shared across workers.
 - Safe logging (`app/logging_config.py`, middleware in `main.py`): one line per request with request id, method, route template (not the raw URL), status and duration; `X-Request-ID` response header; rejected requests log the error code only; unhandled errors log the exception class only and return a generic 500. A filter redacts URL credentials and `password/token/secret/api key/authorization` pairs and strips control characters. Tests assert that submitted file names, bodies, path text and error messages never appear in logs.
 - Known gaps: the body-size check relies on `Content-Length`, so a chunked upload without it is not rejected early (the file and total size limits still apply after parsing); no authentication; rate limits are in-memory.
+
+## Benchmark v1 (recorded 2026-10-16, Plan 3)
+- Command: `conda run -n SpecTrace python -m scripts.benchmark --save` from `backend/`. Dataset `benchmark/v1/` (14 synthetic cases, 26 labeled impacts; split dev 16 impacts, heldout 10). Saved result: `benchmark/v1/results/*-all.json`, which records dataset version, engine configuration, commit and date. Metric definitions: `benchmark/v1/README.md`.
+- Engine: impact precision **1.00**, recall **0.96** (dev 1.00/0.94, heldout 1.00/1.00). Baseline (keyword retrieval): precision **0.87**, recall **0.77** (dev 0.85/0.69, heldout 0.90/0.90).
+- Certainty accuracy 1.00, citation accuracy 1.00, false-confirmed 0, change detection precision/recall 1.00, classification accuracy 1.00, unsupported-impact rate 0 (0 of 25 reported), median 2.67 ms per document.
+- The one engine miss: c04, a documentation section four hops from the change (the search stops at three hops). Labeled as impacted before the run and left as is.
+- The engine was not tuned. The baseline pattern was corrected once after the first run because it refused a name preceded by `/` (so `schemas/Pet` did not count as a mention); this is disclosed in the benchmark README.
+- Caveats: the labels were written by the assistant that built the engine, before the first run, and have not been reviewed by a person. The dataset is small and synthetic. Held-out recall moves 10 points per error. These numbers are a development measurement, not an independent evaluation.
+- Tests: `tests/test_benchmark.py` (12) checks dataset consistency (quoted text at each labeled line), zero unsupported impacts, zero false-confirmed, reproducibility, evidence validity checks and metric arithmetic. Full suite: **114 passed, 2 skipped** (SQLite default), lint clean, coverage 96% over `app` and `scripts`.
+- Not done: the `benchmark_runs` table from the spec (results are stored as files under `benchmark/v1/results/`), an embedding-retrieval baseline, labels reviewed by a person.

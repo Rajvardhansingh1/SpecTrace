@@ -1,0 +1,25 @@
+openapi: 3.0.3
+info:
+  title: Bench
+  version: "1.1.0"
+paths:
+  /tokens:
+    post:
+      summary: Issue a token
+      responses:
+        "201":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+components:
+  schemas:
+    Token:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+        expires_in:
+          type: string

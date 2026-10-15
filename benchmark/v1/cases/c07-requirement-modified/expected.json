@@ -1,0 +1,21 @@
+{
+  "id": "c07-requirement-modified",
+  "split": "heldout",
+  "description": "A requirement is weakened from MUST to SHOULD. A section that cites its ID depends on it. The effect is not decidable by rule.",
+  "changes": {
+    "requirement:REQ-005": "unknown"
+  },
+  "impacts": {
+    "requirement:REQ-005": [
+      {
+        "key": "section:docs/policy.md#backoff",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/policy.md",
+          "line": 7,
+          "text": "Backoff applies as described in REQ-005."
+        }
+      }
+    ]
+  }
+}

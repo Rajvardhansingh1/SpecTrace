@@ -1,0 +1,39 @@
+{
+  "id": "c12-multiple-doc-files",
+  "split": "heldout",
+  "description": "Token.expires_in changes type. One file names POST /tokens; another names Token only in backticks.",
+  "changes": {
+    "schema:Token": "breaking"
+  },
+  "impacts": {
+    "schema:Token": [
+      {
+        "key": "endpoint:POST /tokens",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 15,
+          "text": "$ref: \"#/components/schemas/Token\""
+        }
+      },
+      {
+        "key": "section:docs/a.md#issuing",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/a.md",
+          "line": 4,
+          "text": "Call `POST /tokens` to issue a token."
+        }
+      },
+      {
+        "key": "section:docs/b.md#format",
+        "certainty": "inferred",
+        "cite": {
+          "file": "docs/b.md",
+          "line": 4,
+          "text": "Tokens are described by `Token`."
+        }
+      }
+    ]
+  }
+}

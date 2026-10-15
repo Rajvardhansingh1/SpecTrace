@@ -1,0 +1,21 @@
+{
+  "id": "c11-optional-parameter",
+  "split": "heldout",
+  "description": "An optional parameter is added. The change is non-breaking but the section describing the endpoint may need an update.",
+  "changes": {
+    "endpoint:GET /items": "non_breaking"
+  },
+  "impacts": {
+    "endpoint:GET /items": [
+      {
+        "key": "section:docs/items.md#listing",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/items.md",
+          "line": 4,
+          "text": "Call `GET /items` to list things."
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "c04-transitive-chain",
+  "split": "dev",
+  "description": "Money.amount changes type. Order uses Money, Invoice uses Order, endpoints use those. The docs section is four hops away.",
+  "changes": {
+    "schema:Money": "breaking"
+  },
+  "impacts": {
+    "schema:Money": [
+      {
+        "key": "schema:Order",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 53,
+          "text": "$ref: \"#/components/schemas/Money\""
+        }
+      },
+      {
+        "key": "endpoint:GET /orders",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 29,
+          "text": "$ref: \"#/components/schemas/Order\""
+        }
+      },
+      {
+        "key": "schema:Invoice",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 61,
+          "text": "$ref: \"#/components/schemas/Order\""
+        }
+      },
+      {
+        "key": "endpoint:GET /invoices",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 17,
+          "text": "$ref: \"#/components/schemas/Invoice\""
+        }
+      },
+      {
+        "key": "section:docs/billing.md#invoices",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/billing.md",
+          "line": 4,
+          "text": "Call `GET /invoices` to list invoices."
+        }
+      }
+    ]
+  }
+}

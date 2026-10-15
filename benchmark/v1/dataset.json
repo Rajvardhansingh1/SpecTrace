@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "created": "2026-10-16",
+  "cases": 14,
+  "splits": {"dev": ["c01","c02","c03","c04","c05","c06","c13"], "heldout": ["c07","c08","c09","c10","c11","c12","c14"]},
+  "license": "synthetic data written for this project; no third-party content"
+}

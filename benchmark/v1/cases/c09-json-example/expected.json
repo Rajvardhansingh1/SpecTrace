@@ -1,0 +1,30 @@
+{
+  "id": "c09-json-example",
+  "split": "heldout",
+  "description": "Product.price changes type. A JSON example has the same keys as Product; another example has unrelated keys.",
+  "changes": {
+    "schema:Product": "breaking"
+  },
+  "impacts": {
+    "schema:Product": [
+      {
+        "key": "endpoint:GET /products/{id}",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 21,
+          "text": "$ref: \"#/components/schemas/Product\""
+        }
+      },
+      {
+        "key": "example:docs/catalog.md#sample-product:1",
+        "certainty": "inferred",
+        "cite": {
+          "file": "docs/catalog.md",
+          "line": 4,
+          "text": "```json"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Bench
+  version: "1.0.0"
+paths:
+  /products/{id}:
+    get:
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+components:
+  schemas:
+    Product:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+        sku:
+          type: string

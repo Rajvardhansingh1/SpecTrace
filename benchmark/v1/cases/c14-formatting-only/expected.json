@@ -1,0 +1,7 @@
+{
+  "id": "c14-formatting-only",
+  "split": "heldout",
+  "description": "Only a comment is added to the YAML and trailing spaces to the docs. No change should be reported.",
+  "changes": {},
+  "impacts": {}
+}

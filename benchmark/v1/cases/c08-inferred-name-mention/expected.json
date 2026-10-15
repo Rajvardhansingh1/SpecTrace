@@ -1,0 +1,30 @@
+{
+  "id": "c08-inferred-name-mention",
+  "split": "heldout",
+  "description": "Customer loses a property. One section names the schema only in backticks, so the link is a guess.",
+  "changes": {
+    "schema:Customer": "breaking"
+  },
+  "impacts": {
+    "schema:Customer": [
+      {
+        "key": "endpoint:GET /customers",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "openapi.yaml",
+          "line": 17,
+          "text": "$ref: \"#/components/schemas/Customer\""
+        }
+      },
+      {
+        "key": "section:docs/crm.md#onboarding",
+        "certainty": "inferred",
+        "cite": {
+          "file": "docs/crm.md",
+          "line": 4,
+          "text": "We create a `Customer` record when the user signs up."
+        }
+      }
+    ]
+  }
+}

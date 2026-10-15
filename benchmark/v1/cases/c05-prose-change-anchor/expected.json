@@ -1,0 +1,21 @@
+{
+  "id": "c05-prose-change-anchor",
+  "split": "dev",
+  "description": "One section's prose changes. The section that links to it by anchor depends on it.",
+  "changes": {
+    "section:docs/guide.md#setup": "documentation"
+  },
+  "impacts": {
+    "section:docs/guide.md#setup": [
+      {
+        "key": "section:docs/guide.md#usage",
+        "certainty": "confirmed",
+        "cite": {
+          "file": "docs/guide.md",
+          "line": 7,
+          "text": "Run the tool. See [setup](#setup) first."
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "c13-additions-only",
+  "split": "dev",
+  "description": "A new endpoint and schema are added. Nothing existing changes, so nothing is impacted.",
+  "changes": {
+    "endpoint:GET /v2/ping": "non_breaking",
+    "schema:Pong": "non_breaking"
+  },
+  "impacts": {}
+}

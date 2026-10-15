@@ -121,6 +121,17 @@
 - **Consequences / trade-offs:** Limits reset on restart and are per worker, so they do not stop a distributed flood. Behind Render the proxy header must be trusted explicitly, otherwise all clients share one proxy IP.
 - **Validation / evidence:** `tests/test_rate_limit.py` (8 tests), `tests/test_logging.py` (7 tests).
 
+## D-013 — Benchmark design: hand-labeled impact pairs, keyword baseline, results as files
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** D-003 requires a measurable benchmark with a baseline before any improvement claim. The spec's baseline is keyword retrieval (P6).
+- **Decision:** 14 synthetic cases with labeled (change, impacted entity) pairs, certainty and citation line. Metrics are micro-averaged precision and recall of pairs, certainty accuracy, citation accuracy, false-confirmed count, change detection and classification accuracy, unsupported-impact rate and time per document. Splits: dev for tuning, heldout only for reporting. Results are JSON files in `benchmark/v1/results/`.
+- **Why this option:** Pair-level labels make precision, recall and citation checkable. The false-confirmed and unsupported-impact metrics test the project's claim that a confirmed impact is backed by evidence.
+- **How it is implemented:** `benchmark/v1/`, `backend/scripts/benchmark.py`, `backend/tests/test_benchmark.py`.
+- **Alternatives considered:** Embedding retrieval baseline (deferred); results in a database table (files are enough for now and reproducible from the repository).
+- **Consequences / trade-offs:** Labels come from one labeler (the assistant) and were not independently reviewed; the dataset is small. The baseline was corrected once after the first run (disclosed). The thresholds 0.8, 0.6 and 0.75 from D-007 are still untuned; any tuning must use the dev split only.
+- **Validation / evidence:** see "Benchmark v1" in `State.md`.
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

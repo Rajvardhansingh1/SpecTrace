@@ -1,0 +1,42 @@
+openapi: 3.0.3
+info:
+  title: Bench
+  version: "1.0.0"
+paths:
+  /pets/{petId}:
+    get:
+      summary: Get a pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+    delete:
+      summary: Delete a pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ok
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
