@@ -1,0 +1,10 @@
+fastapi==0.143.2
+uvicorn==0.54.0
+python-multipart==0.0.32
+pydantic==2.14.1
+pydantic-settings==2.16.0
+ruamel.yaml==0.19.1
+SQLAlchemy==2.1.4
+alembic==1.20.0
+psycopg[binary]==3.3.6
+httpx==0.28.1
