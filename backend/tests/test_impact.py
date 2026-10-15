@@ -1,7 +1,8 @@
+from helpers import graph_of
+
 from app.core.diff import diff_graphs
 from app.core.impact import find_impacts
 from app.core.models import Label
-from helpers import graph_of
 
 
 def impacts_for(a_files, b_files, key, **kw):

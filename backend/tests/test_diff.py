@@ -1,6 +1,7 @@
+from helpers import graph_of
+
 from app.core.diff import diff_graphs
 from app.core.models import ChangeType, Classification
-from helpers import graph_of
 
 API = """openapi: 3.0.0
 paths:
@@ -70,7 +71,9 @@ def test_optional_parameter_added_is_non_breaking():
 
 def test_summary_only_change_is_documentation():
     a, b = api(), api(summary="Browse things")
-    assert only(diff_graphs(graph_of(a), graph_of(b))).classification is Classification.DOCUMENTATION
+    assert (
+        only(diff_graphs(graph_of(a), graph_of(b))).classification is Classification.DOCUMENTATION
+    )
 
 
 def test_removed_endpoint_is_breaking():
@@ -83,7 +86,9 @@ def test_removed_endpoint_is_breaking():
 def test_added_schema_property_required_vs_optional():
     base = api()["openapi.yaml"]
     optional = base.replace(
-        "          type: string\n", "          type: string\n        note:\n          type: string\n", 1
+        "          type: string\n",
+        "          type: string\n        note:\n          type: string\n",
+        1,
     )
     c = only(diff_graphs(graph_of({"openapi.yaml": base}), graph_of({"openapi.yaml": optional})))
     assert c.classification is Classification.NON_BREAKING
@@ -100,4 +105,6 @@ def test_requirement_change_is_unknown_not_breaking():
 def test_prose_change_is_documentation():
     a = {"a.md": "## A\nhello\n"}
     b = {"a.md": "## A\nhello there\n"}
-    assert only(diff_graphs(graph_of(a), graph_of(b))).classification is Classification.DOCUMENTATION
+    assert (
+        only(diff_graphs(graph_of(a), graph_of(b))).classification is Classification.DOCUMENTATION
+    )

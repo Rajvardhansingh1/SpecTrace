@@ -1,8 +1,9 @@
+from helpers import graph_of
+
 from app.core.graph import build_graph
 from app.core.limits import Limits
 from app.core.models import Label
 from app.core.parsers.markdown import parse_markdown
-from helpers import graph_of
 
 LIMITS = Limits()
 

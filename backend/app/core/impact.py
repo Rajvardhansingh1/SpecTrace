@@ -51,9 +51,7 @@ def _score(path: tuple[Edge, ...]) -> tuple:
 
 
 def _impact(change: Change, impacted_key: str, path: tuple[Edge, ...]) -> Impact:
-    certainty = (
-        Label.CONFIRMED if all(e.label is Label.CONFIRMED for e in path) else Label.INFERRED
-    )
+    certainty = Label.CONFIRMED if all(e.label is Label.CONFIRMED for e in path) else Label.INFERRED
     hops = " -> ".join(f"{e.source_key} {e.relation} {e.target_key}" for e in reversed(path))
     return Impact(
         change_key=change.key,

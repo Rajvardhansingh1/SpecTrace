@@ -51,6 +51,54 @@
 - **Alternatives considered:** Automatically maintaining the test plan.
 - **Trade-offs:** Test strategy changes require explicit user authorization to update `Testing.md`.
 
+## D-006 — Deterministic-first engine; LLM off in the MVP
+- **Date:** 2026-10-16
+- **Status:** Accepted for Plan 1 (user approved proceeding with the spec; P1 not separately contested)
+- **Context / problem:** Impact analysis must be reproducible and benchmarkable; the brief says deterministic parsers first.
+- **Decision:** No LLM calls. Change classification uses fixed rules; semantically ambiguous cases (requirement edits) are classified `unknown`, never `breaking`.
+- **Why this option:** Reproducible results, zero model cost, no leakage of document content to a provider.
+- **How it is implemented:** `backend/app/core/diff.py` rules; `Classification.UNKNOWN` for requirements and removed parameters.
+- **Alternatives considered:** LLM classification of every change; hybrid from day one.
+- **Consequences / trade-offs:** Semantic changes in prose are not judged; recall on subtle changes will be limited.
+- **Validation / evidence:** `tests/test_diff.py` (9 tests). Part of the diff rules are untested (see `State.md`).
+
+## D-007 — Confirmed vs inferred labeling rule
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** The brief forbids presenting speculative impact as a confirmed breaking change.
+- **Decision:** An edge is `confirmed` only for OpenAPI `$ref`, a Markdown `METHOD /path` mention that matches an endpoint (path parameter names and trailing slash ignored), an anchor link to an existing section, or an existing requirement ID. Backticked schema name = `inferred` 0.8. JSON example keys vs schema properties = `inferred` 0.6, requiring at least 2 shared keys and Jaccard ≥ 0.75. An impact is `confirmed` only if every edge on its path is; `confirmed_breaking` additionally requires a `breaking` classification from a deterministic rule.
+- **Why this option:** Syntactic evidence is checkable; heuristics carry their confidence and reason.
+- **How it is implemented:** `graph.py` (`_resolve`, constants), `impact.py` (`_impact`).
+- **Alternatives considered:** Single score; treating backticked names as confirmed.
+- **Consequences / trade-offs:** 0.8, 0.6 and 0.75 are unmeasured starting values. The 0.75 threshold was chosen so the `NewPet` schema (Jaccard 0.67) is not matched by a `Pet` example. Plan 3 must tune them on a held-out split, not on the sample.
+- **Validation / evidence:** `tests/test_graph.py`, `tests/test_impact.py`, `tests/test_regression_scenarios.py` (hand-labeled impact sets: 5 confirmed, 2 inferred for the petstore `Pet.id` change).
+
+## D-008 — ruamel.yaml round-trip loader with explicit bounds
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** Citations need line numbers; `yaml.safe_load` drops them. Uploaded YAML is untrusted.
+- **Decision:** Parse with `ruamel.yaml` `YAML(typ="rt")` (no arbitrary object construction), then walk the result iteratively without a visited set, capping nodes (200,000) and depth (50); map `RecursionError` to `limit_exceeded`.
+- **Why this option:** Line info plus alias-bomb protection. Aliases load as shared objects in milliseconds, so the node-count walk is what stops expansion.
+- **How it is implemented:** `parsers/openapi.py` `_load`, `_check_bounds`.
+- **Alternatives considered:** PyYAML safe_load plus text search for line numbers (inaccurate).
+- **Consequences / trade-offs:** YAML merge keys (`<<`) are not exercised by tests. JSON documents parse through the same loader; line numbers for single-line JSON are all 1.
+- **Validation / evidence:** `tests/test_openapi_parser.py`: alias bomb, depth 100 and 5000 rejected.
+
+## D-009 — Python 3.13 in the `SpecTrace` conda env
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** The env had no interpreter; `conda run` silently used `C:\Python314`.
+- **Decision:** Install Python 3.13.16 into the env; run everything as `conda run -n SpecTrace python -m ...`; pin direct dependencies in `backend/requirements*.txt`.
+- **Why this option:** All compiled dependencies ship `cp313` wheels; Render supports 3.13.
+- **Alternatives considered:** Keep 3.14 (wheel availability unverified).
+- **Validation / evidence:** `pip check` clean; 65 tests pass under 3.13.16.
+
+## D-010 — Database topology (proposed, not yet implemented)
+- **Date:** 2026-10-16
+- **Status:** Proposed (Plan 2)
+- **Decision:** Docker Postgres for local/integration tests; Supabase (session pooler URL) for production, created via the Supabase MCP; SQLAlchemy + Alembic; RLS enabled with no public policies.
+- **Validation required:** Restart-persistence and migration tests; RLS denial test for the anon role.
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

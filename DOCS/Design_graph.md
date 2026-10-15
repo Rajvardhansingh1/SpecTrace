@@ -82,6 +82,34 @@ flowchart TD
     G --> H
 ```
 
+## 6. Implemented core engine data flow (as of 2026-10-16)
+
+Everything in this diagram exists and is unit-tested. Nodes outside it (database, HTTP routes, frontend, benchmark) are planned.
+
+```mermaid
+flowchart TD
+    FILES["files A and B: {path: text}"] --> CHK["_build: path safety, size and count limits"]
+    CHK -->|.yaml .yml .json| OAS["parse_openapi: ruamel rt, node/depth caps"]
+    CHK -->|.md .txt| MD["parse_markdown"]
+    CHK -->|other types or non-OpenAPI| UNS["unsupported list"]
+    OAS --> PR["ParseResult: entities, direct edges"]
+    MD --> PR2["ParseResult: entities, raw refs"]
+    PR --> G["build_graph: resolve refs, label confirmed or inferred"]
+    PR2 --> G
+    G --> GA["Graph A"]
+    G --> GB["Graph B"]
+    GA --> D["diff_graphs: hash compare, deterministic classification"]
+    GB --> D
+    D --> CH["Change list with source diffs"]
+    CH --> I["find_impacts: reverse-edge paths over A and B edges, depth 3"]
+    GA --> I
+    GB --> I
+    I --> R["AnalysisResult: changes, impacts with evidence paths, warnings, stats"]
+    R --> Q["answer_question: answered, no_change or uncertain"]
+```
+
+Trust boundary note: every input to `_build` is untrusted. Limits and path checks run before parsing; the only code that interprets YAML is `parsers/openapi.py`.
+
 ## Graph maintenance rules
 
 - Update the graph when a component, data contract, trust boundary, state transition, persistence dependency, or external integration changes.

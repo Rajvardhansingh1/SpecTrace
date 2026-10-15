@@ -51,12 +51,22 @@ Ingest version A and B -> parse files -> normalize artifacts -> diff artifacts -
 - Do not add dependencies without checking whether existing libraries are sufficient.
 - Do not treat this starter explanation as proof of implementation; update it when code exists.
 
-## Implementation map
-Update this section with actual paths once files are created:
-- `frontend/` — planned UI.
-- `backend/app/main.py` — planned API entry point.
-- `backend/app/core/` — planned domain logic.
-- `backend/app/adapters/` — planned external integrations.
-- `backend/app/models/` — planned request/response schemas.
-- `backend/tests/` — planned automated tests.
-- `scripts/` — planned benchmark/demo scripts.
+## Implementation map (as of 2026-10-16)
+Implemented:
+- `backend/app/main.py` — `create_app()`: CORS allow-list, `SpecTraceError` → `{"error": {"code", "message"}}` envelope, `GET /health`. No analysis routes yet.
+- `backend/app/config.py`, `backend/app/errors.py` — env settings (`SPECTRACE_` prefix); error classes with stable codes (`input_too_large` 413, `unsupported_input` 415, `parse_error` 422, `limit_exceeded` 422).
+- `backend/app/core/models.py` — frozen pydantic types: `Location`, `Entity`, `Edge`, `RawRef`, `ParseResult`, `Change`, `Impact`.
+- `backend/app/core/limits.py` — `Limits` (files, bytes, entities, YAML nodes/depth).
+- `backend/app/core/parsers/openapi.py` — OpenAPI YAML/JSON → endpoint and schema entities, `$ref` edges, exact line spans; semantic content hash.
+- `backend/app/core/parsers/markdown.py` — Markdown → sections, requirements (`REQ-###` or RFC 2119 keyword), fenced examples, raw references.
+- `backend/app/core/graph.py` — resolves raw references into edges, labels each `confirmed` or `inferred` (rule in D-007), dedupes, records warnings for unresolved references.
+- `backend/app/core/diff.py` — per-entity diff, deterministic breaking-change rules, unified source diff.
+- `backend/app/core/impact.py` — bounded reverse-edge path search; best path per impacted entity.
+- `backend/app/core/pipeline.py` — `analyze()` (input checks, parse, graph, diff, impacts) and `answer_question()`.
+- `backend/tests/` — 65 tests; `samples/petstore/{v1,v2}` — sample data with one breaking change (`Pet.id` string → integer) and stale docs.
+
+Core data flow: files → parser → `ParseResult` → `build_graph` → `Graph` (A and B) → `diff_graphs` → `Change[]` → `find_impacts` over the union of A and B edges → `AnalysisResult`.
+
+Planned, not implemented: `frontend/`, `backend/app/adapters/` (sources, LLM, store), `backend/app/api/v1/`, database models and Alembic migrations, `scripts/` (benchmark), `benchmark/`.
+
+Known limitations of the engine: only `#/components/schemas/*` refs are resolved (no external or parameter refs); renamed entities appear as remove + add; `allOf`/`oneOf` composition is not interpreted; bare-word mentions are not detected; the confidence values are unmeasured defaults.

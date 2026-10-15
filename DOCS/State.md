@@ -3,7 +3,7 @@
 ## Project identity
 - **Name:** SpecTrace
 - **Purpose:** Version-aware technical documentation retrieval and change-impact analysis.
-- **Status:** `PLANNING / NOT IMPLEMENTED`
+- **Status:** `IN DEVELOPMENT — backend core engine implemented and unit-tested (Plan 1); no persistence, HTTP analysis routes, frontend, benchmark or deployment yet`
 - **Last updated:** 2026-10-16
 - **Source of truth:** Actual repository contents and verified execution results. This file is project memory, not a substitute for code.
 
@@ -11,13 +11,13 @@
 When technical specifications, OpenAPI schemas, and documentation change, engineers need to identify what changed and which downstream components, examples, integrations, and requirements may be affected. Ordinary RAG retrieves relevant text but often cannot trace versioned dependencies.
 
 ## Scope for the first MVP
-- [ ] Accept Git repository URLs or uploaded Markdown, OpenAPI YAML/JSON, and text-based technical documents from two versions.
-- [ ] Normalize sources into versioned artifacts with stable identifiers and source locations.
-- [ ] Detect additions, deletions, and semantic changes; preserve exact source diffs.
-- [ ] Extract entities such as endpoints, schemas, requirements, examples, and named components.
-- [ ] Build a lightweight dependency graph from explicit references and cautiously inferred links.
-- [ ] Answer impact questions with evidence paths and clear labels for confirmed versus inferred impacts.
-- [ ] Provide an interface to inspect a change, graph path, source snippets, and confidence.
+- [ ] Accept Git repository URLs or uploaded Markdown, OpenAPI YAML/JSON, and text-based technical documents from two versions. *(engine takes in-memory `{path: text}` dicts for both versions — implemented and tested; upload/GitHub intake and HTTP route: planned, Plans 2 and 5)*
+- [x] Normalize sources into versioned artifacts with stable identifiers and source locations. *(implemented, unit-tested)*
+- [x] Detect additions, deletions, and semantic changes; preserve exact source diffs. *(deterministic classification only; no LLM; implemented, unit-tested)*
+- [x] Extract entities such as endpoints, schemas, requirements, examples, and named components. *(endpoints, schemas, sections, requirements, examples; "named components" not implemented)*
+- [x] Build a lightweight dependency graph from explicit references and cautiously inferred links. *(implemented, unit-tested)*
+- [x] Answer impact questions with evidence paths and clear labels for confirmed versus inferred impacts. *(engine level; no HTTP route yet)*
+- [ ] Provide an interface to inspect a change, graph path, source snippets, and confidence. *(planned, Plan 4)*
 
 ## Current architecture hypothesis
 Next.js frontend on Vercel; FastAPI API on Render; PostgreSQL for metadata and graph edges; pgvector optional for semantic retrieval; background ingestion task; GitHub API or uploaded archives as sources. Use deterministic parsers for OpenAPI and Markdown first; use an LLM only for semantic change classification and ambiguous links.
@@ -25,18 +25,25 @@ Next.js frontend on Vercel; FastAPI API on Render; PostgreSQL for metadata and g
 ## Current status and milestones
 - [x] Project concept selected.
 - [x] Starter documentation scaffold generated.
-- [ ] Repository initialized.
-- [ ] Architecture and dependencies verified.
-- [ ] First end-to-end vertical slice implemented.
-- [ ] Component tests run and results recorded.
+- [x] Repository initialized (git, branch `main`, 2026-10-16).
+- [x] Architecture and dependencies verified (Python 3.13.16 env, `pip check` clean).
+- [ ] First end-to-end vertical slice implemented. *(engine slice done at the library level only; user-visible slice needs Plans 2 and 4)*
+- [x] Component tests run and results recorded (see "Test results" below).
 - [ ] Deployment verified on Vercel and Render.
 - [ ] README and demo prepared.
 
 ## Verified implementation facts
-- No application implementation has been created by this starter pack.
-- No tests have been run.
-- No deployment has been performed.
-- Do not change these statements until verified evidence exists.
+- Implemented and verified (2026-10-16): `backend/app/core/` (models, limits, OpenAPI parser, Markdown parser, graph, diff, impact, pipeline) and the `backend/app` shell (`/health`, error envelope, CORS allow-list).
+- Not implemented: database/persistence, Alembic migrations, `/v1` analysis routes, upload/GitHub sources, rate limiting, logging, LLM adapter, benchmark, frontend, deployment config, README, `.env.example`.
+- No deployment has been performed. Supabase and Render MCPs are connected but unused.
+
+## Test results (recorded 2026-10-16)
+- Command: `conda run -n SpecTrace --cwd backend python -m pytest --cov=app -q` → **65 passed, 1 warning** (starlette `httpx` deprecation notice), 0 failed, 0 skipped.
+- Coverage: **92%** overall (716 statements, 56 missed). Lowest: `diff.py` 80% (several classification rules untested: parameter type change, request-body rules, response removal/schema change, schema type change), `graph.py` 86% (duplicate-entity and unknown-endpoint/requirement warning branches), `markdown.py` 92%, `impact.py` 92% (expansion cap untested).
+- Lint: `ruff check` clean, `ruff format --check` clean.
+- Domain purity: no `fastapi`/`sqlalchemy`/`psycopg`/`app.api`/`app.adapters` imports under `backend/app/core` (grep).
+- `Testing.md` scenarios 1–4 have regression tests (`tests/test_regression_scenarios.py`); scenario 5 (private repo) is not applicable until the GitHub adapter exists. Integration, E2E, security (beyond parser bounds), reliability and benchmark tests: **not yet written**.
+- Tests were written together with implementation for Tasks 4, 6, 7, 8 rather than seen failing first; Tasks 1, 2, 3, 5 were run red first. Treat the tests as unproven against mutation until the missing diff rules above are covered.
 
 ## Current blockers / unknowns
 - [ ] Choose model/provider and confirm pricing/limits if an external model is needed.
@@ -98,5 +105,9 @@ flowchart TD
 - 2026-10-16 — Filled the "Security and safety" section of `Prompt.md`/`ProjectBreif.md` (kept identical). Confirmed conda env `SpecTrace` runs Python 3.14.2 with pydantic 2.10.3, SQLAlchemy 2.0.39, Alembic 1.18.4, pytest 8.3.4, PyYAML, ruamel.yaml; FastAPI, uvicorn and a Postgres driver are **not installed**. No Supabase tool is available in this session; the user creates the project. Superpowers 6.3.0 skills found at `~\.claude\plugins\cache\claude-plugins-official\superpowers\6.3.0\skills`; read `using-superpowers`, `brainstorming`, `writing-plans` (loaded, applied to produce the spec and plan). Wrote design spec and Plan 1 under `DOCS/superpowers/`. Awaiting user approval; no code written.
 - 2026-10-16 — Installed Python 3.13.16 and all dependencies into the env. Reviewed Plan 1 and fixed 10 flaws (review log at the end of the plan). Verified the YAML alias-bomb cap and ruamel line info with a throwaway probe script outside the repo. No project code written yet; `git init` still awaiting authorization.
 
+- 2026-10-16 — Executed Plan 1 inline (no subagents), commit per task: scaffold, models, OpenAPI parser, Markdown parser, graph, diff, impact, pipeline. 65 tests pass, 92% coverage. Deviations from the plan: `pytest` `pythonpath` includes `tests` so `import helpers` works; ruff reformatted imports/long lines. Skills actually applied: `superpowers:writing-plans` (plan authoring), `superpowers:brainstorming` (design gate). `test-driven-development`, `verification-before-completion` and `executing-plans` were not opened; their practices were followed informally, not by reading the skills, so they are **not** reported as applied.
+
 ## Next recommended action
-Resolve the blockers above that affect the first slice (Python version for the backend, database for local development, whether an LLM is used in the MVP), record them in `Decision.md`, then build the backend vertical slice on sample two-version data: parse OpenAPI and Markdown, diff, extract entities, build the graph, return an impact report with confirmed/inferred labels.
+1. Close the diff-rule coverage gaps listed under "Test results" (small, same plan).
+2. Write Plan 2 (persistence + `/v1` API + security tests): create the Supabase project through the MCP (needs user go-ahead for the region and any cost), start Docker Postgres for integration tests, add SQLAlchemy models, Alembic migrations with RLS, run lifecycle and routes.
+3. Then Plans 3 (benchmark), 4 (frontend), 5 (GitHub source, deployment, README).
