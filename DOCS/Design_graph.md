@@ -133,3 +133,18 @@ Trust boundary: request bodies are untrusted and are size-limited before parsing
 reachable only from the backend. Run states: `running` -> `done` or `failed` (with error code).
 
 Request middleware order (implemented): `CORS -> log_requests -> rate_limit -> limit_body_size -> route`. The rate limiter keeps per-client timestamps in process memory (planned limitation: not shared across workers). Logs are a trust boundary: only request id, route template, status, duration and error codes leave the process.
+
+## Frontend flow (implemented 2026-10-16, tested locally, not deployed)
+
+```mermaid
+flowchart LR
+    U[Browser] -->|files read locally| F[Compare form]
+    F -->|POST /v1/runs| API[(SpecTrace API)]
+    API --> R[Run view]
+    R -->|GET /v1/runs/id| API
+    R -->|GET /v1/runs/id/snippet| API
+    R -->|POST /v1/runs/id/ask| API
+    B[Benchmark page] --- D[(data/benchmark.json, copied at build)]
+```
+
+Trust boundary: the browser sends file contents to the API and receives only JSON. The API origin must be in `SPECTRACE_CORS_ORIGINS`; `Retry-After` and `X-Request-ID` are exposed to it. The frontend contains no database URL or key.

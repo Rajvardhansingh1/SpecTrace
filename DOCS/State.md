@@ -3,7 +3,7 @@
 ## Project identity
 - **Name:** SpecTrace
 - **Purpose:** Version-aware technical documentation retrieval and change-impact analysis.
-- **Status:** `IN DEVELOPMENT — core engine (Plan 1) and run persistence + /v1 API (Plan 2, local) implemented and tested; Supabase schema applied; benchmark v1 implemented (Plan 3); no frontend, GitHub source or deployment yet`
+- **Status:** `IN DEVELOPMENT — core engine (Plan 1) and run persistence + /v1 API (Plan 2, local) implemented and tested; Supabase schema applied; benchmark v1 (Plan 3) and frontend (Plan 4) implemented and tested locally; GitHub source and deployment not done`
 - **Last updated:** 2026-10-16
 - **Source of truth:** Actual repository contents and verified execution results. This file is project memory, not a substitute for code.
 
@@ -17,7 +17,7 @@ When technical specifications, OpenAPI schemas, and documentation change, engine
 - [x] Extract entities such as endpoints, schemas, requirements, examples, and named components. *(endpoints, schemas, sections, requirements, examples; "named components" not implemented)*
 - [x] Build a lightweight dependency graph from explicit references and cautiously inferred links. *(implemented, unit-tested)*
 - [x] Answer impact questions with evidence paths and clear labels for confirmed versus inferred impacts. *(engine level; no HTTP route yet)*
-- [ ] Provide an interface to inspect a change, graph path, source snippets, and confidence. *(planned, Plan 4)*
+- [x] Provide an interface to inspect a change, graph path, source snippets, and confidence. *(implemented in `frontend/`, tested locally with Chrome; not deployed)*
 
 ## Current architecture hypothesis
 Next.js frontend on Vercel; FastAPI API on Render; PostgreSQL for metadata and graph edges; pgvector optional for semantic retrieval; background ingestion task; GitHub API or uploaded archives as sources. Use deterministic parsers for OpenAPI and Markdown first; use an LLM only for semantic change classification and ambiguous links.
@@ -145,3 +145,18 @@ flowchart TD
 - Caveats: the labels were written by the assistant that built the engine, before the first run, and have not been reviewed by a person. The dataset is small and synthetic. Held-out recall moves 10 points per error. These numbers are a development measurement, not an independent evaluation.
 - Tests: `tests/test_benchmark.py` (12) checks dataset consistency (quoted text at each labeled line), zero unsupported impacts, zero false-confirmed, reproducibility, evidence validity checks and metric arithmetic. Full suite: **114 passed, 2 skipped** (SQLite default), lint clean, coverage 96% over `app` and `scripts`.
 - Not done: the `benchmark_runs` table from the spec (results are stored as files under `benchmark/v1/results/`), an embedding-retrieval baseline, labels reviewed by a person.
+
+## Frontend (recorded 2026-10-16, Plan 4)
+- `frontend/`: Next.js 16.4.2 (App Router), React 19.3.1, TypeScript, plain CSS from tokens (no Tailwind or component library). Routes: `/` compare and history, `/runs/[id]` change ledger with evidence paths, cited source lines and source diff, question box; `/benchmark` stored benchmark result with its caveats. Run instructions: `frontend/README.md`. Design direction: `frontend/DESIGN.md`, **agent-authored and not approved by the product owner** (no brand direction existed); dials ENERGY 1 / RHYTHM 2 / MOTION 1.
+- Backend addition for it: `GET /v1/runs/{id}/snippet` (cited source lines, dictionary lookup on stored files, 404 for unknown files or lines, 422 for bad parameters). Backend suite: **118 passed, 2 skipped**, coverage 96% over `app` and `scripts`.
+- Checks run (2026-10-16): `tsc --noEmit` clean; `eslint` clean; Vitest **49 passed** (unit and component: files, diff, evidence, formatting, API client including timeout and Retry-After, every component state); Playwright in system Chrome against the real backend (in-memory database) and a production build: **19 passed**. They cover the main flow, own-file upload with skipped-file notices, invalid YAML, backend down, rate limit, unknown run, 404 page, empty result, benchmark page, keyboard-only flow, axe (WCAG 2 A/AA, 2.1, 2.2 AA and best-practice) on every screen in light and dark, no horizontal overflow and 44 px targets at 375 px, usable at 320 px, and no database URL or secret in any response served to the browser. The hosted `runs` table still had 0 rows afterwards.
+- Defects found by these tests and fixed: the skipped-file notice for version A was erased when files were chosen for B; 1 px horizontal overflow of the header at 320 px; "Show source at" lost the space before the file name; repeated "Confirmed" boxes on every hop; the question box pushed the change list out of view; the backend did not expose `Retry-After` and `X-Request-ID` to browsers (now tested).
+- One browser test (`cited OpenAPI line`) failed once while the machine was also running the backend coverage suite, then passed on three consecutive full runs. The cause was not diagnosed; the assertion timeout was raised from 5 s to 10 s. Treat it as a possible timing sensitivity.
+- Contrast: every text pair in `DESIGN.md` was computed with the antislop checker (light and dark); control borders are at least 3:1.
+- Skills actually loaded and followed: `anti-ai-slop-ui`, `antislop` (core), `antislop-ui`, `antislop-copywriting`, `antislop-human`, `antislop-layoutmobile`. Scripts actually run: `contrast-check.py`, `ui_lint.py` (reported 0.0 of 10; it is a heuristic and only reads what it can match). The AI Slop and Distinctiveness scores are the assistant's own judgment, not an independent review. Mode: "during" (the user asked for the skills while developing).
+- Not done: deployment to Vercel and Render (needs authorization and the hosted CORS origin), a manual theme toggle, drag and drop, a visual review by a person, a screen-reader pass with a real assistive technology (axe is automated and finds only part of the problems), GitHub source.
+
+## Next recommended action (updated after Plan 4)
+1. Review `frontend/DESIGN.md` and the screens and say what to change; the direction was chosen by the assistant.
+2. Review the benchmark labels (`benchmark/v1/cases/*/expected.json`); they are unreviewed.
+3. Deployment (Plan 5): Render for the backend with the session-pooler URL as a secret and `SPECTRACE_TRUST_PROXY_HEADERS=true`, Vercel for the frontend with `NEXT_PUBLIC_API_URL`, then set `SPECTRACE_CORS_ORIGINS` to the Vercel origin. Each needs your authorization.

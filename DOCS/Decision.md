@@ -132,6 +132,17 @@
 - **Consequences / trade-offs:** Labels come from one labeler (the assistant) and were not independently reviewed; the dataset is small. The baseline was corrected once after the first run (disclosed). The thresholds 0.8, 0.6 and 0.75 from D-007 are still untuned; any tuning must use the dev split only.
 - **Validation / evidence:** see "Benchmark v1" in `State.md`.
 
+## D-014 — Frontend: custom CSS, evidence-ledger design, system-theme dark mode
+- **Date:** 2026-10-16
+- **Status:** Accepted as a draft, pending owner review of `frontend/DESIGN.md`
+- **Context / problem:** The product's claim is that every impact shows how it was found and that a guess never looks like a fact. The interface must make that visible. No brand direction existed.
+- **Decision:** Next.js App Router with plain CSS from tokens. Confirmed and inferred are separated by word and border style (solid or dashed), never by color alone. Classifications have their own shape and word. Cited source lines come from the API on demand. The dark theme follows the system setting. The browser calls the API directly with a public `NEXT_PUBLIC_API_URL`.
+- **Why this option:** A reading-oriented tool needs hierarchy from type and rules, not cards or effects; avoiding a component library keeps the default-template look out; the direct call keeps the frontend free of server secrets.
+- **How it is implemented:** `frontend/app`, `frontend/components`, `frontend/lib`, `backend/app/api/v1/runs.py` (`/snippet`).
+- **Alternatives considered:** Tailwind with shadcn (the default look the skills warn against); a Next.js route that proxies the API (adds a server hop without a secret to protect); a manual theme toggle (more to test, deferred).
+- **Consequences / trade-offs:** More CSS to maintain. The backend must list the frontend origin in `SPECTRACE_CORS_ORIGINS` and expose `Retry-After` and `X-Request-ID` (done). Benchmark and sample data are copied into `frontend/` by `npm run sync` because the Vercel root cannot read the parent folder.
+- **Validation / evidence:** see "Frontend" in `State.md`.
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

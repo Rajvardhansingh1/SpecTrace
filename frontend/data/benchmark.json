@@ -1,0 +1,678 @@
+{
+  "dataset": {
+    "version": "v1",
+    "split": "all",
+    "cases": 14
+  },
+  "run": {
+    "date": "2026-10-15T23:11:22+00:00",
+    "commit": "d3af1d7"
+  },
+  "config": {
+    "engine_version": "0.1.0",
+    "limits": {
+      "max_files": 200,
+      "max_file_bytes": 1000000,
+      "max_total_bytes": 5000000,
+      "max_entities": 20000,
+      "max_yaml_nodes": 200000,
+      "max_yaml_depth": 50
+    },
+    "max_depth": 3,
+    "name_confidence": 0.8,
+    "property_confidence": 0.6,
+    "property_min_shared": 2,
+    "property_min_jaccard": 0.75,
+    "baseline": "case-insensitive whole-word match of the entity name in other entities"
+  },
+  "aggregate": {
+    "cases": 14,
+    "engine": {
+      "precision": 1.0,
+      "recall": 0.9615,
+      "reported": 25,
+      "true_positive": 25,
+      "expected": 26,
+      "certainty_accuracy": 1.0,
+      "citation_accuracy": 1.0,
+      "false_confirmed": 0,
+      "false_confirmed_rate": 0.0
+    },
+    "baseline": {
+      "precision": 0.8696,
+      "recall": 0.7692,
+      "reported": 23,
+      "true_positive": 20,
+      "expected": 26
+    },
+    "changes": {
+      "detection_precision": 1.0,
+      "detection_recall": 1.0,
+      "classification_accuracy": 1.0
+    },
+    "unsupported_impacts": 0,
+    "unsupported_impact_rate": 0.0,
+    "ms_per_document": {
+      "median": 2.947,
+      "max": 9.526
+    }
+  },
+  "by_split": {
+    "dev": {
+      "cases": 7,
+      "engine": {
+        "precision": 1.0,
+        "recall": 0.9375,
+        "reported": 15,
+        "true_positive": 15,
+        "expected": 16,
+        "certainty_accuracy": 1.0,
+        "citation_accuracy": 1.0,
+        "false_confirmed": 0,
+        "false_confirmed_rate": 0.0
+      },
+      "baseline": {
+        "precision": 0.8462,
+        "recall": 0.6875,
+        "reported": 13,
+        "true_positive": 11,
+        "expected": 16
+      },
+      "changes": {
+        "detection_precision": 1.0,
+        "detection_recall": 1.0,
+        "classification_accuracy": 1.0
+      },
+      "unsupported_impacts": 0,
+      "unsupported_impact_rate": 0.0,
+      "ms_per_document": {
+        "median": 4.109,
+        "max": 9.526
+      }
+    },
+    "heldout": {
+      "cases": 7,
+      "engine": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "reported": 10,
+        "true_positive": 10,
+        "expected": 10,
+        "certainty_accuracy": 1.0,
+        "citation_accuracy": 1.0,
+        "false_confirmed": 0,
+        "false_confirmed_rate": 0.0
+      },
+      "baseline": {
+        "precision": 0.9,
+        "recall": 0.9,
+        "reported": 10,
+        "true_positive": 9,
+        "expected": 10
+      },
+      "changes": {
+        "detection_precision": 1.0,
+        "detection_recall": 1.0,
+        "classification_accuracy": 1.0
+      },
+      "unsupported_impacts": 0,
+      "unsupported_impact_rate": 0.0,
+      "ms_per_document": {
+        "median": 2.405,
+        "max": 4.418
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "c01-petstore-id-type",
+      "split": "dev",
+      "engine": {
+        "reported": 7,
+        "expected": 7,
+        "true_positive": 7,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 7,
+        "cite_correct": 7,
+        "confirmed_reported": 5,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 6,
+        "expected": 7,
+        "true_positive": 6,
+        "missed": [
+          [
+            "schema:Pet",
+            "example:docs/guide.md#fetching-a-pet:1"
+          ]
+        ],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 7,
+      "ms_per_document": 9.526
+    },
+    {
+      "id": "c02-required-parameter",
+      "split": "dev",
+      "engine": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 1,
+        "cite_correct": 1,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 1,
+      "ms_per_document": 5.171
+    },
+    {
+      "id": "c03-endpoint-removed",
+      "split": "dev",
+      "engine": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 2,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 2,
+        "cite_correct": 2,
+        "confirmed_reported": 2,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 2,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 2,
+      "ms_per_document": 3.41
+    },
+    {
+      "id": "c04-transitive-chain",
+      "split": "dev",
+      "engine": {
+        "reported": 4,
+        "expected": 5,
+        "true_positive": 4,
+        "missed": [
+          [
+            "schema:Money",
+            "section:docs/billing.md#invoices"
+          ]
+        ],
+        "extra": [],
+        "certainty_correct": 4,
+        "cite_correct": 4,
+        "confirmed_reported": 4,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 5,
+        "true_positive": 1,
+        "missed": [
+          [
+            "schema:Money",
+            "endpoint:GET /invoices"
+          ],
+          [
+            "schema:Money",
+            "endpoint:GET /orders"
+          ],
+          [
+            "schema:Money",
+            "schema:Invoice"
+          ],
+          [
+            "schema:Money",
+            "section:docs/billing.md#invoices"
+          ]
+        ],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 4,
+      "ms_per_document": 5.699
+    },
+    {
+      "id": "c05-prose-change-anchor",
+      "split": "dev",
+      "engine": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 1,
+        "cite_correct": 1,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 1,
+      "ms_per_document": 0.448
+    },
+    {
+      "id": "c06-unrelated-generic-word",
+      "split": "dev",
+      "engine": {
+        "reported": 0,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 2,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [
+          [
+            "schema:Item",
+            "section:docs/widgets.md#listing"
+          ],
+          [
+            "schema:Item",
+            "section:docs/widgets.md#notes"
+          ]
+        ],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 0,
+      "ms_per_document": 4.109
+    },
+    {
+      "id": "c07-requirement-modified",
+      "split": "heldout",
+      "engine": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 1,
+        "cite_correct": 1,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 1,
+      "ms_per_document": 1.109
+    },
+    {
+      "id": "c08-inferred-name-mention",
+      "split": "heldout",
+      "engine": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 2,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 2,
+        "cite_correct": 2,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 2,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 2,
+      "ms_per_document": 4.418
+    },
+    {
+      "id": "c09-json-example",
+      "split": "heldout",
+      "engine": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 2,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 2,
+        "cite_correct": 2,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 2,
+        "expected": 2,
+        "true_positive": 1,
+        "missed": [
+          [
+            "schema:Product",
+            "example:docs/catalog.md#sample-product:1"
+          ]
+        ],
+        "extra": [
+          [
+            "schema:Product",
+            "section:docs/catalog.md#sample-product"
+          ]
+        ],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 2,
+      "ms_per_document": 4.229
+    },
+    {
+      "id": "c10-parameter-type",
+      "split": "heldout",
+      "engine": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 1,
+        "cite_correct": 1,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 1,
+      "ms_per_document": 2.405
+    },
+    {
+      "id": "c11-optional-parameter",
+      "split": "heldout",
+      "engine": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 1,
+        "cite_correct": 1,
+        "confirmed_reported": 1,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 1,
+        "expected": 1,
+        "true_positive": 1,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 1,
+      "ms_per_document": 2.485
+    },
+    {
+      "id": "c12-multiple-doc-files",
+      "split": "heldout",
+      "engine": {
+        "reported": 3,
+        "expected": 3,
+        "true_positive": 3,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 3,
+        "cite_correct": 3,
+        "confirmed_reported": 2,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 3,
+        "expected": 3,
+        "true_positive": 3,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 1,
+        "reported": 1,
+        "matched": 1,
+        "classified_correctly": 1
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 3,
+      "ms_per_document": 1.472
+    },
+    {
+      "id": "c13-additions-only",
+      "split": "dev",
+      "engine": {
+        "reported": 0,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 0,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 2,
+        "reported": 2,
+        "matched": 2,
+        "classified_correctly": 2
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 0,
+      "ms_per_document": 2.319
+    },
+    {
+      "id": "c14-formatting-only",
+      "split": "heldout",
+      "engine": {
+        "reported": 0,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "baseline": {
+        "reported": 0,
+        "expected": 0,
+        "true_positive": 0,
+        "missed": [],
+        "extra": [],
+        "certainty_correct": 0,
+        "cite_correct": 0,
+        "confirmed_reported": 0,
+        "false_confirmed": 0
+      },
+      "changes": {
+        "expected": 0,
+        "reported": 0,
+        "matched": 0,
+        "classified_correctly": 0
+      },
+      "unsupported_impacts": 0,
+      "unsupported_detail": [],
+      "impacts_reported": 0,
+      "ms_per_document": 1.632
+    }
+  ]
+}

@@ -84,3 +84,13 @@ def test_forwarded_header_is_ignored_unless_proxy_is_trusted():
     trusted = client(rate_limit_per_minute=2, trust_proxy_headers=True)
     codes = [trusted.get("/v1/runs", headers=spoof(i)).status_code for i in range(3)]
     assert codes == [200, 200, 200]
+
+
+def test_browsers_may_read_retry_after_and_request_id_across_origins():
+    c = client(rate_limit_per_minute=1, cors_origins=["http://localhost:3000"])
+    headers = {"Origin": "http://localhost:3000"}
+    c.get("/v1/runs", headers=headers)
+    limited = c.get("/v1/runs", headers=headers)
+    assert limited.status_code == 429
+    exposed = limited.headers["access-control-expose-headers"].lower()
+    assert "retry-after" in exposed and "x-request-id" in exposed
