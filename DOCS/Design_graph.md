@@ -131,3 +131,5 @@ flowchart LR
 
 Trust boundary: request bodies are untrusted and are size-limited before parsing; the database is
 reachable only from the backend. Run states: `running` -> `done` or `failed` (with error code).
+
+Request middleware order (implemented): `CORS -> log_requests -> rate_limit -> limit_body_size -> route`. The rate limiter keeps per-client timestamps in process memory (planned limitation: not shared across workers). Logs are a trust boundary: only request id, route template, status, duration and error codes leave the process.

@@ -72,3 +72,5 @@ Persistence and API (implemented 2026-10-16): `app/adapters/store.py` holds `Run
 Planned, not implemented: `frontend/`, source adapters (GitHub), LLM adapter, rate limiting, `scripts/` (benchmark), `benchmark/`.
 
 Known limitations of the engine: only `#/components/schemas/*` refs are resolved (no external or parameter refs); renamed entities appear as remove + add; `allOf`/`oneOf` composition is not interpreted; bare-word mentions are not detected; the confidence values are unmeasured defaults.
+
+Request pipeline (implemented 2026-10-16), outermost first: CORS, request logging (assigns the request id, catches unhandled errors and returns a generic 500), rate limiting, body-size check, routes. CORS is outermost so 413 and 429 responses still carry CORS headers. Logs hold identifiers only; see D-012.

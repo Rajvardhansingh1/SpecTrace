@@ -110,6 +110,17 @@
 - **Consequences / trade-offs:** Large inputs are stored in the row (limit 5 MB per side); no SQL queries across entities; SQLAlchemy's `create_all` also runs at startup and is a no-op when the table exists. Tests default to in-memory SQLite, with Postgres tests opt-in through `SPECTRACE_TEST_DATABASE_URL`.
 - **Validation / evidence:** 88 tests pass against local Postgres; pgTAP 8/8; see `State.md`.
 
+## D-012 — In-process rate limiting and content-free logging
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** `Testing.md` security tests require rate limits and no secret leakage in logs. Uploaded documents can contain anything, and database errors can echo statement parameters.
+- **Decision:** A sliding-window limiter in process memory (no new dependency), with a tight bucket for POST. Logging records identifiers and codes only: request id, method, route template, status, duration, error code or exception class. A redacting filter is a second line of defence.
+- **Why this option:** Meets the free-tier single-instance deployment with no extra service; making the log content-free is stronger than trying to scrub content.
+- **How it is implemented:** `app/api/ratelimit.py`, `app/logging_config.py`, middleware in `app/main.py`; settings `SPECTRACE_RATE_LIMIT_*` and `SPECTRACE_TRUST_PROXY_HEADERS`.
+- **Alternatives considered:** `slowapi` or Redis (new dependency or service); logging request bodies at debug level (rejected).
+- **Consequences / trade-offs:** Limits reset on restart and are per worker, so they do not stop a distributed flood. Behind Render the proxy header must be trusted explicitly, otherwise all clients share one proxy IP.
+- **Validation / evidence:** `tests/test_rate_limit.py` (8 tests), `tests/test_logging.py` (7 tests).
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

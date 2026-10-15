@@ -1,3 +1,6 @@
+import time
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +12,7 @@ from app.api.ratelimit import SlidingWindowLimiter
 from app.api.v1.runs import router as runs_router
 from app.config import Settings
 from app.errors import SpecTraceError
+from app.logging_config import get_logger
 
 # Never limited, so platform health checks keep working while a client is throttled.
 _UNLIMITED_PATHS = {"/health"}
@@ -33,10 +37,13 @@ def _client_key(request: Request, trust_proxy: bool) -> str:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
+    log = get_logger()
     app = FastAPI(title="SpecTrace", version=__version__)
 
     @app.exception_handler(SpecTraceError)
-    async def handle_spectrace_error(_: Request, exc: SpecTraceError):
+    async def handle_spectrace_error(request: Request, exc: SpecTraceError):
+        # The code is a fixed identifier; exc.message is deliberately left out of the log.
+        log.info("rejected id=%s code=%s", getattr(request.state, "request_id", "-"), exc.code)
         return _envelope(exc.status, exc.code, exc.message)
 
     @app.exception_handler(RequestValidationError)
@@ -72,13 +79,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return await call_next(request)
 
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        request_id = uuid.uuid4().hex[:12]
+        request.state.request_id = request_id
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # Only the exception class is logged: messages from the database layer can contain
+            # statement parameters, which hold submitted documents.
+            log.error("unhandled id=%s error=%s", request_id, type(exc).__name__)
+            response = _envelope(500, "internal_error", "internal error")
+        route = request.scope.get("route")
+        # The route template, not the raw URL, so user-supplied path text never reaches the log.
+        path = getattr(route, "path", "unmatched")
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        log.info(
+            "request id=%s method=%s path=%s status=%s ms=%.1f",
+            request_id,
+            request.method,
+            path,
+            response.status_code,
+            elapsed_ms,
+        )
+        response.headers["X-Request-ID"] = request_id
+        return response
+
     # Added last so it is outermost: CORS headers are also set on 413 and 429 responses.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
-        expose_headers=["Retry-After"],
+        expose_headers=["Retry-After", "X-Request-ID"],
     )
 
     engine = make_engine(settings.database_url)
