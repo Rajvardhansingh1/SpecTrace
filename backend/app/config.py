@@ -6,3 +6,4 @@ class Settings(BaseSettings):
 
     database_url: str | None = None
     cors_origins: list[str] = ["http://localhost:3000"]
+    max_request_bytes: int = 12_000_000
