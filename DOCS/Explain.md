@@ -67,6 +67,8 @@ Implemented:
 
 Core data flow: files → parser → `ParseResult` → `build_graph` → `Graph` (A and B) → `diff_graphs` → `Change[]` → `find_impacts` over the union of A and B edges → `AnalysisResult`.
 
-Planned, not implemented: `frontend/`, `backend/app/adapters/` (sources, LLM, store), `backend/app/api/v1/`, database models and Alembic migrations, `scripts/` (benchmark), `benchmark/`.
+Persistence and API (implemented 2026-10-16): `app/adapters/store.py` holds `RunStore` over SQLAlchemy; the `runs` table keeps input files and the serialized result as JSON (`jsonb` on Postgres). `app/api/v1/runs.py` exposes `POST /v1/runs` (analyze inline, store, return summary), `GET /v1/runs`, `GET /v1/runs/{id}` and `POST /v1/runs/{id}/ask` (re-runs the deterministic analysis on stored inputs, then `answer_question`). `main.py` adds a request-size check (413 before parsing) and replaces pydantic validation detail with a fixed `invalid_request` message so submitted input is never echoed. A failed analysis marks the run `failed` with its error code. With no `SPECTRACE_DATABASE_URL` the store is in-memory SQLite and nothing survives a restart.
+
+Planned, not implemented: `frontend/`, source adapters (GitHub), LLM adapter, rate limiting, `scripts/` (benchmark), `benchmark/`.
 
 Known limitations of the engine: only `#/components/schemas/*` refs are resolved (no external or parameter refs); renamed entities appear as remove + add; `allOf`/`oneOf` composition is not interpreted; bare-word mentions are not detected; the confidence values are unmeasured defaults.

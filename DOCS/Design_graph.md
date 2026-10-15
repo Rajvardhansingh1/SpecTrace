@@ -116,3 +116,18 @@ Trust boundary note: every input to `_build` is untrusted. Limits and path check
 - Add nodes and edges only when grounded in actual code or explicitly labeled as planned.
 - Keep diagrams readable; split a graph if it becomes too dense.
 - Explain non-obvious edges and failure paths in `Explain.md`.
+
+## Persistence and API flow (implemented 2026-10-16; hosted DB not yet connected to the backend)
+
+```mermaid
+flowchart LR
+    C[Client] -->|JSON, size-checked| API[/v1/runs routes/]
+    API --> P[core.pipeline.analyze]
+    API <--> S[RunStore SQLAlchemy]
+    S -->|local tests| PG[(Postgres 17 via Supabase CLI)]
+    S -->|prod, planned| SB[(Supabase via session pooler)]
+    SB -. RLS on, no policies; anon and authenticated revoked .- X[public REST API blocked]
+```
+
+Trust boundary: request bodies are untrusted and are size-limited before parsing; the database is
+reachable only from the backend. Run states: `running` -> `done` or `failed` (with error code).
