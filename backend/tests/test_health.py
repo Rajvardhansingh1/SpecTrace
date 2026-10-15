@@ -34,3 +34,19 @@ def test_cors_allows_configured_origin_only():
     bad = client.get("/health", headers={"Origin": "https://evil.example"})
     assert ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
     assert "access-control-allow-origin" not in bad.headers
+
+
+def test_plain_postgres_urls_use_the_psycopg3_driver():
+    for plain in ("postgresql://u:p@h:5432/db", "postgres://u:p@h:5432/db"):
+        url = Settings(_env_file=None, database_url=plain).database_url
+        assert url == "postgresql+psycopg://u:p@h:5432/db"
+    explicit = "postgresql+psycopg://u:p@h/db"
+    assert Settings(_env_file=None, database_url=explicit).database_url == explicit
+
+
+def test_plain_postgres_urls_use_the_psycopg3_driver():
+    for plain in ("postgresql://u:p@h:5432/db", "postgres://u:p@h:5432/db"):
+        url = Settings(_env_file=None, database_url=plain).database_url
+        assert url == "postgresql+psycopg://u:p@h:5432/db"
+    explicit = "postgresql+psycopg://u:p@h/db"
+    assert Settings(_env_file=None, database_url=explicit).database_url == explicit
