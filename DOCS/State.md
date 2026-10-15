@@ -3,7 +3,7 @@
 ## Project identity
 - **Name:** SpecTrace
 - **Purpose:** Version-aware technical documentation retrieval and change-impact analysis.
-- **Status:** `IN DEVELOPMENT — backend core engine implemented and unit-tested (Plan 1); no persistence, HTTP analysis routes, frontend, benchmark or deployment yet`
+- **Status:** `IN DEVELOPMENT — core engine (Plan 1) and run persistence + /v1 API (Plan 2, local) implemented and tested; Supabase schema applied; no frontend, benchmark, GitHub source or deployment yet`
 - **Last updated:** 2026-10-16
 - **Source of truth:** Actual repository contents and verified execution results. This file is project memory, not a substitute for code.
 
@@ -34,8 +34,9 @@ Next.js frontend on Vercel; FastAPI API on Render; PostgreSQL for metadata and g
 
 ## Verified implementation facts
 - Implemented and verified (2026-10-16): `backend/app/core/` (models, limits, OpenAPI parser, Markdown parser, graph, diff, impact, pipeline) and the `backend/app` shell (`/health`, error envelope, CORS allow-list).
-- Not implemented: database/persistence, Alembic migrations, `/v1` analysis routes, upload/GitHub sources, rate limiting, logging, LLM adapter, benchmark, frontend, deployment config, README, `.env.example`.
-- No deployment has been performed. Supabase and Render MCPs are connected but unused.
+- Also implemented and verified (2026-10-16, Plan 2): `app/adapters/store.py` (SQLAlchemy `RunStore`, `runs` table), `app/api/v1/runs.py` (`POST/GET /v1/runs`, `GET /v1/runs/{id}`, `POST /v1/runs/{id}/ask`), request-size middleware, fixed-message validation errors, `supabase/` CLI layout.
+- Not implemented: Alembic (the schema is a Supabase SQL migration instead), normalized artifact/edge/change tables (a run stores inputs and result as JSON), upload/GitHub sources, rate limiting, logging, LLM adapter, benchmark, frontend, deployment config, README, `.env.example`.
+- No deployment has been performed. Supabase project `SpecTrace` (`kwrfzsktlahleiytxnnm`, ap-northeast-1) has migration `20261015221156_create_runs` applied. Render MCP is connected but unused. The backend has NOT been run against the hosted Supabase database (no pooler URL configured).
 
 ## Test results (recorded 2026-10-16)
 - Command: `conda run -n SpecTrace --cwd backend python -m pytest --cov=app -q` → **65 passed, 1 warning** (starlette `httpx` deprecation notice), 0 failed, 0 skipped.
@@ -111,3 +112,19 @@ flowchart TD
 1. Close the diff-rule coverage gaps listed under "Test results" (small, same plan).
 2. Write Plan 2 (persistence + `/v1` API + security tests): create the Supabase project through the MCP (needs user go-ahead for the region and any cost), start Docker Postgres for integration tests, add SQLAlchemy models, Alembic migrations with RLS, run lifecycle and routes.
 3. Then Plans 3 (benchmark), 4 (frontend), 5 (GitHub source, deployment, README).
+
+## Test results, Plan 2 (recorded 2026-10-16)
+- `python -m pytest -q` (SQLite, default): **86 passed, 2 skipped** (the two Postgres integration tests need `SPECTRACE_TEST_DATABASE_URL`).
+- `SPECTRACE_TEST_DATABASE_URL=postgresql+psycopg://...@127.0.0.1:54322/postgres python -m pytest --cov=app -q` (Supabase CLI local Postgres 17): **88 passed**, coverage **96%** (844 statements, 36 missed). `diff.py` 100%.
+- `supabase test db` (pgTAP, `supabase/tests/runs.test.sql`): **8/8 passed** against the local database. Covers table exists, RLS on, valid insert, status and label-length checks, `anon` read denied, `authenticated` write denied.
+- The first Postgres run failed (`column "id" is of type uuid but expression is of type character varying`); fixed by using `Uuid` and `JSONB` variants. Invalid run ids return 404 instead of a database error.
+- Lint: `ruff check` and `ruff format --check` clean.
+- Hosted-database behavioural test (insert/deny against the live project) was declined three times at the tool-permission prompt and was not run; the same checks pass locally. Hosted state was verified read-only (`list_tables`: RLS on, constraints present; security advisor: only the expected INFO `rls_enabled_no_policy`).
+- Not yet written: API security tests beyond size/validation (rate limits, log redaction), reliability tests, E2E, benchmark.
+
+## Recent activity log, Plan 2
+- 2026-10-16 — Closed diff-rule coverage gaps (14 tests). Added the Supabase CLI (scoop, v2.121.0; local stack via Docker). Built the run store and `/v1` routes, applied the `runs` migration to Supabase, moved SQL to `supabase/migrations/` with the remote version timestamp, added a pgTAP test and Postgres integration tests. Skills actually applied: none loaded this session.
+
+## Next recommended action (updated)
+1. Configure `SPECTRACE_DATABASE_URL` with the Supabase session-pooler URL (user to supply/approve; never commit) and run the integration tests against the hosted project.
+2. Rate limiting and safe logging (Testing.md security layer), then Plan 3 (benchmark), Plan 4 (frontend), Plan 5 (GitHub source, deployment, README).

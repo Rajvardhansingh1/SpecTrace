@@ -99,6 +99,17 @@
 - **Decision:** Docker Postgres for local/integration tests; Supabase (session pooler URL) for production, created via the Supabase MCP; SQLAlchemy + Alembic; RLS enabled with no public policies.
 - **Validation required:** Restart-persistence and migration tests; RLS denial test for the anon role.
 
+## D-011 — Runs stored as one row with JSON; Supabase CLI owns the schema
+- **Date:** 2026-10-16
+- **Status:** Accepted (supersedes the table list in the design spec section 6 and the Alembic part of D-010)
+- **Context / problem:** The spec called for artifacts/edges/changes tables and Alembic. The first slice only needs to create, read and list runs, and re-run questions.
+- **Decision:** One `runs` table: status, labels, timestamps, error code, input files (`jsonb`), result (`jsonb`). Schema lives in `supabase/migrations/` and is applied with the Supabase CLI or MCP. RLS on, no policies, `anon`/`authenticated` revoked; the backend connects through the pooler. `ask` re-runs the deterministic analysis on stored inputs.
+- **Why this option:** Smallest durable design that works; the CLI gives migration history, a local Postgres and pgTAP tests.
+- **How it is implemented:** `app/adapters/store.py`, `supabase/migrations/20261015221156_create_runs.sql`, `supabase/tests/runs.test.sql`.
+- **Alternatives considered:** Normalized tables now (premature); Alembic (a second migration system next to the Supabase one).
+- **Consequences / trade-offs:** Large inputs are stored in the row (limit 5 MB per side); no SQL queries across entities; SQLAlchemy's `create_all` also runs at startup and is a no-op when the table exists. Tests default to in-memory SQLite, with Postgres tests opt-in through `SPECTRACE_TEST_DATABASE_URL`.
+- **Validation / evidence:** 88 tests pass against local Postgres; pgTAP 8/8; see `State.md`.
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.
