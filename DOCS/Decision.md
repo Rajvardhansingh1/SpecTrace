@@ -143,6 +143,17 @@
 - **Consequences / trade-offs:** More CSS to maintain. The backend must list the frontend origin in `SPECTRACE_CORS_ORIGINS` and expose `Retry-After` and `X-Request-ID` (done). Benchmark and sample data are copied into `frontend/` by `npm run sync` because the Vercel root cannot read the parent folder.
 - **Validation / evidence:** see "Frontend" in `State.md`.
 
+## D-015 — Serialize in-memory SQLite access; theme override by attribute
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context / problem:** Repeated browser runs showed an occasional HTTP 500 on `POST /v1/runs`. The in-memory SQLite engine uses one shared connection (`StaticPool`) across the server's worker threads; a concurrent read ended a write's transaction, so the run row vanished before `finish`.
+- **Decision:** `RunStore` takes a re-entrant lock around every operation when the engine dialect is SQLite, and no lock otherwise. Separately, the theme choice is a `data-theme` attribute on `<html>`, set by an inline script before first paint and by the toggle; the system setting applies only when the attribute is absent.
+- **Why this option:** The lock is the smallest change that keeps the zero-configuration in-memory mode; Postgres already isolates connections. The attribute lets CSS express the override without JavaScript-computed colors and avoids a flash of the wrong theme.
+- **How it is implemented:** `backend/app/adapters/store.py`; `frontend/components/ThemeToggle.tsx`, `frontend/app/layout.tsx`, `frontend/app/globals.css`.
+- **Alternatives considered:** per-thread SQLite connections with shared-cache memory (more moving parts); dropping the in-memory mode (loses the no-setup development path).
+- **Consequences / trade-offs:** In-memory mode serializes requests, which is fine for development and tests. The dark token list is written twice in the CSS and must be kept identical.
+- **Validation / evidence:** `tests/test_store_concurrency.py` failed 3 of 3 before and passes after; 5 consecutive full browser runs with 0 server errors; theme tests in `e2e/input-and-theme.spec.ts`.
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

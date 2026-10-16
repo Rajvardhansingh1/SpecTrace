@@ -1,4 +1,6 @@
+import threading
 import uuid
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from typing import Any
 
@@ -48,6 +50,10 @@ def init_schema(engine: Engine) -> None:
 class RunStore:
     def __init__(self, engine: Engine):
         self._sessions = sessionmaker(engine, expire_on_commit=False)
+        # The in-memory SQLite engine shares one connection between all worker threads, so a read
+        # could end the transaction of a concurrent write. A lock keeps one operation at a time.
+        # Postgres has a real connection pool and needs no lock.
+        self._lock = threading.RLock() if engine.dialect.name == "sqlite" else nullcontext()
 
     def create(
         self, label_a: str, label_b: str, files_a: dict[str, str], files_b: dict[str, str]
@@ -61,17 +67,17 @@ class RunStore:
             files_a=files_a,
             files_b=files_b,
         )
-        with self._sessions.begin() as s:
+        with self._lock, self._sessions.begin() as s:
             s.add(row)
         return row
 
     def finish(self, run_id: str, result: dict[str, Any]) -> None:
-        with self._sessions.begin() as s:
+        with self._lock, self._sessions.begin() as s:
             row = s.get(RunRow, run_id)
             row.status, row.result, row.finished_at = "done", result, datetime.now(UTC)
 
     def fail(self, run_id: str, error_code: str) -> None:
-        with self._sessions.begin() as s:
+        with self._lock, self._sessions.begin() as s:
             row = s.get(RunRow, run_id)
             row.status, row.error_code, row.finished_at = "failed", error_code, datetime.now(UTC)
 
@@ -80,16 +86,16 @@ class RunStore:
             run_id = str(uuid.UUID(run_id))
         except ValueError:
             return None
-        with self._sessions() as s:
+        with self._lock, self._sessions() as s:
             return s.get(RunRow, run_id)
 
     def delete(self, run_id: str) -> None:
-        with self._sessions.begin() as s:
+        with self._lock, self._sessions.begin() as s:
             row = s.get(RunRow, run_id)
             if row is not None:
                 s.delete(row)
 
     def list(self, limit: int = 50) -> list[RunRow]:
-        with self._sessions() as s:
+        with self._lock, self._sessions() as s:
             q = select(RunRow).order_by(RunRow.created_at.desc()).limit(limit)
             return list(s.scalars(q))

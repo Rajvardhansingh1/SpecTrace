@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { getSnippet } from "@/lib/api";
 import { citation, hopsFromImpacted } from "@/lib/evidence";
 import { describeError, percent, relationLabel } from "@/lib/format";
@@ -18,6 +18,7 @@ function EvidenceHop({ edge, runId, versionOf }: Context & { edge: Edge }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const where = citation(edge);
+  const regionId = useId();
 
   async function toggle() {
     const next = !open;
@@ -42,30 +43,38 @@ function EvidenceHop({ edge, runId, versionOf }: Context & { edge: Edge }) {
         type="button"
         className="button button--quiet hop__toggle"
         aria-expanded={open}
+        aria-controls={regionId}
         onClick={toggle}
       >
         {open ? "Hide" : "Show"} source at <span className="mono">{where}</span>
       </button>
-      {open ? (
-        <div className="snippet" aria-live="polite">
-          {loading ? <p className="muted">Loading source...</p> : null}
-          {error ? <p role="alert">{error}</p> : null}
-          {snippet ? (
-            <pre aria-label={`Source around ${where}`}>
-              {snippet.lines.map((line) => (
-                <span
-                  key={line.n}
-                  className={line.n === edge.evidence.line_start ? "snippet__line snippet__line--cited" : "snippet__line"}
-                >
-                  <span className="snippet__n">{line.n}</span>
-                  <span className="snippet__text">{line.text || " "}</span>
-                  {"\n"}
-                </span>
-              ))}
-            </pre>
-          ) : null}
-        </div>
-      ) : null}
+      {/* Always rendered: a live region that appears together with its content is often not announced. */}
+      <div id={regionId} className="snippet" aria-live="polite">
+        {open ? (
+          <>
+            {loading ? <p className="muted">Loading source...</p> : null}
+            {error ? <p role="alert">{error}</p> : null}
+            {snippet ? (
+              <pre aria-label={`Source around ${where}`}>
+                {snippet.lines.map((line) => (
+                  <span
+                    key={line.n}
+                    className={
+                      line.n === edge.evidence.line_start
+                        ? "snippet__line snippet__line--cited"
+                        : "snippet__line"
+                    }
+                  >
+                    <span className="snippet__n">{line.n}</span>
+                    <span className="snippet__text">{line.text || " "}</span>
+                    {"\n"}
+                  </span>
+                ))}
+              </pre>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </>
   );
 }

@@ -48,6 +48,63 @@ export async function readFiles(list: Iterable<File>, fromFolder: boolean): Prom
   return { files, skipped };
 }
 
+/** Directories that are never documentation. Skipping them keeps a dropped project folder fast. */
+const IGNORED_DIRS = new Set(["node_modules", ".git"]);
+export const MAX_DROPPED_FILES = 1000;
+
+export interface Dropped {
+  files: File[];
+  /** True when a directory was dropped, so its own name is dropped from the paths. */
+  fromFolder: boolean;
+  notes: string[];
+}
+
+const asFile = (entry: FileSystemFileEntry) =>
+  new Promise<File>((ok, fail) => entry.file(ok, fail));
+
+const readBatch = (reader: FileSystemDirectoryReader) =>
+  new Promise<FileSystemEntry[]>((ok, fail) => reader.readEntries(ok, fail));
+
+async function walk(entry: FileSystemEntry, out: File[], notes: string[]): Promise<void> {
+  if (out.length >= MAX_DROPPED_FILES) return;
+  if (entry.isFile) {
+    const file = await asFile(entry as FileSystemFileEntry);
+    // A File cannot be given a path, so a copy carries it the way a folder picker would.
+    const copy = new File([file], file.name, { type: file.type });
+    Object.defineProperty(copy, "webkitRelativePath", { value: entry.fullPath.replace(/^\/+/, "") });
+    out.push(copy);
+    return;
+  }
+  if (!entry.isDirectory || IGNORED_DIRS.has(entry.name)) return;
+  const reader = (entry as FileSystemDirectoryEntry).createReader();
+  // readEntries returns at most about 100 entries per call, so it is called until it is empty.
+  for (let batch = await readBatch(reader); batch.length > 0; batch = await readBatch(reader)) {
+    for (const child of batch) await walk(child, out, notes);
+    if (out.length >= MAX_DROPPED_FILES) {
+      if (notes.length === 0) notes.push(`only the first ${MAX_DROPPED_FILES} files were read`);
+      return;
+    }
+  }
+}
+
+/**
+ * Reads what was dropped, including folders. The entries must be taken from the event before the
+ * first await, because the browser empties the drop data once the event handler returns.
+ */
+export async function collectDropped(data: DataTransfer): Promise<Dropped> {
+  const entries = Array.from(data.items ?? [])
+    .filter((item) => item.kind === "file")
+    .map((item) => item.webkitGetAsEntry?.() ?? null)
+    .filter((entry): entry is FileSystemEntry => entry !== null);
+  const plain = Array.from(data.files ?? []);
+
+  if (entries.length === 0) return { files: plain, fromFolder: false, notes: [] };
+  const files: File[] = [];
+  const notes: string[] = [];
+  for (const entry of entries) await walk(entry, files, notes);
+  return { files, fromFolder: entries.some((e) => e.isDirectory), notes };
+}
+
 export function totalBytes(files: VersionFiles): number {
   return Object.values(files).reduce((sum, text) => sum + byteLength(text), 0);
 }

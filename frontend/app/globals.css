@@ -31,8 +31,30 @@
   --font-data: var(--font-mono), ui-monospace, monospace;
 }
 
+/* The dark tokens appear twice on purpose: once for a manual choice, once for the system setting
+   when no manual choice was made. Keep the two lists identical. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --paper: #14130f;
+    --surface: #1c1b16;
+    --ink: #ece8db;
+    --ink-2: #b5b0a0;
+    --rule: #34322a;
+    --edge: #8a8574;
+    --accent: #5cc4c0;
+    --on-accent: #0b1a1a;
+    --breaking: #ff8a7e;
+    --review: #e0ae5a;
+    --ok: #7fcb8e;
+    --del-bg: #3a2320;
+    --add-bg: #1f3322;
+    --cite-bg: #3a3522;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --paper: #14130f;
     --surface: #1c1b16;
     --ink: #ece8db;
@@ -656,7 +678,7 @@ input[type="text"]::placeholder {
   color: var(--ink-2);
   font-size: 0.9rem;
 }
-.snippet {
+.snippet > * {
   margin-top: var(--space-1);
 }
 .snippet pre,
@@ -701,6 +723,86 @@ input[type="text"]::placeholder {
 .diff__line--file,
 .diff__line--hunk {
   color: var(--ink-2);
+}
+
+.theme {
+  display: inline-flex;
+}
+.theme__option {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--edge);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 100ms;
+}
+.theme__option + .theme__option {
+  margin-left: -1px;
+}
+.theme__option:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.theme__option:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.theme__option:hover {
+  background: var(--rule);
+}
+.theme__option[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  position: relative;
+}
+
+/* ---------- drag and drop ---------- */
+.pane--drag {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  background: var(--surface);
+}
+.pane__drop--active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- forced colors (Windows high contrast) ---------- */
+/* Background colors are removed in this mode, so every state that relied on one gets a border or outline. */
+@media (forced-colors: active) {
+  .tag__mark {
+    forced-color-adjust: none;
+    background: CanvasText;
+    border: 0;
+  }
+  .tag--documentation .tag__mark {
+    background: transparent;
+    border: 2px solid CanvasText;
+  }
+  .filter[aria-pressed="true"],
+  .theme__option[aria-pressed="true"] {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+    text-decoration: underline;
+  }
+  .change[aria-current="true"] {
+    outline: 3px solid Highlight;
+  }
+  .snippet__line--cited {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .button--primary {
+    border: 2px solid ButtonText;
+  }
+  .button:disabled {
+    border-style: dashed;
+  }
+  .pane--drag {
+    outline-color: Highlight;
+  }
 }
 
 /* ---------- wider screens ---------- */

@@ -39,6 +39,6 @@ The Vercel project root is `frontend/`, so the build cannot read `../samples` or
 
 ## Known limits
 
-- No manual theme toggle; the theme follows the system setting.
-- No drag and drop; use the file or folder picker.
+- Accessibility is checked by automated tests only; no real screen reader or user testing yet (see [ACCESSIBILITY.md](ACCESSIBILITY.md)).
+- Tests run in Chrome only.
 - Not deployed. The Vercel build and the production CORS origin are unverified.

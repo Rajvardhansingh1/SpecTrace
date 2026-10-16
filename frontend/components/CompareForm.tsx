@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createRun } from "@/lib/api";
 import { checkVersion } from "@/lib/files";
 import { describeError } from "@/lib/format";
@@ -21,6 +21,19 @@ export function CompareForm() {
   const [skipped, setSkipped] = useState<{ A: string[]; B: string[] }>({ A: [], B: [] });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // A file dropped outside a version box would make the browser open it and leave the page.
+    const block = (e: DragEvent) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", block);
+    window.addEventListener("drop", block);
+    return () => {
+      window.removeEventListener("dragover", block);
+      window.removeEventListener("drop", block);
+    };
+  }, []);
 
   const problemA = checkVersion("version A", filesA);
   const problemB = checkVersion("version B", filesB);

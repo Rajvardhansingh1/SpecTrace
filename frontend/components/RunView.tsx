@@ -27,6 +27,11 @@ export function RunView({ id }: { id: string }) {
     };
   }, [id]);
 
+  useEffect(() => {
+    // A title that names the two versions tells screen-reader users and tab lists which page this is.
+    if (run) document.title = `${run.label_a} to ${run.label_b} | SpecTrace`;
+  }, [run]);
+
   const result = run?.result ?? null;
   const versionOf = useMemo(() => versionResolver(result?.graph.edges_b ?? []), [result]);
   const sorted = useMemo(() => (result ? sortChanges(result.changes) : []), [result]);
