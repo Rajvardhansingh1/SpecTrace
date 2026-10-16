@@ -3,6 +3,13 @@ import { defineConfig } from "@playwright/test";
 const FRONTEND = "http://localhost:3000";
 const BACKEND = "http://localhost:8000";
 
+// Defaults suit the local setup (system Chrome, a conda environment named SpecTrace). CI overrides them.
+const BACKEND_COMMAND =
+  process.env.E2E_BACKEND_COMMAND ??
+  "conda run --no-capture-output -n SpecTrace python -m uvicorn app.main:app --port 8000";
+// An empty E2E_CHANNEL selects the Chromium that `playwright install` downloads.
+const CHANNEL = process.env.E2E_CHANNEL === undefined ? "chrome" : process.env.E2E_CHANNEL || undefined;
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 45_000,
@@ -13,15 +20,14 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: FRONTEND,
-    // The system Chrome is used so no browser download is needed.
-    channel: "chrome",
+    channel: CHANNEL,
     trace: "retain-on-failure",
   },
   webServer: [
     {
       // An empty database URL forces in-memory SQLite, so tests never reach a hosted database
       // even when backend/.env points at one.
-      command: "conda run --no-capture-output -n SpecTrace python -m uvicorn app.main:app --port 8000",
+      command: BACKEND_COMMAND,
       cwd: "../backend",
       url: `${BACKEND}/health`,
       reuseExistingServer: false,

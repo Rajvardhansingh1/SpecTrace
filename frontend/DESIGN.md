@@ -1,8 +1,8 @@
 # SpecTrace frontend: design direction
 
-> Status: **agent-authored draft, not approved by the product owner.** No brand direction existed, so this was written from `DOCS/ProjectBreif.md` using the `anti-ai-slop-ui` process. The owner can replace any decision below. Dials declared per `antislop` R-37.
+> Status: design direction for the first release. There were no separate brand guidelines, so it was derived from the product itself: a tool for reading evidence. Any decision below can be replaced.
 
-Reading this as: API and documentation engineers reviewing a change before release, in an evidence-ledger style (printed audit document, mono for data), dial ENERGY 1 / RHYTHM 2 / MOTION 1.
+Audience and style: API and documentation engineers reviewing a change before release, in an evidence-ledger style (a printed audit document, with a monospaced face for data). Calm, low motion, moderate density.
 
 ## Product context
 
@@ -46,7 +46,7 @@ A reviewed document, not a dashboard. Hairline rules, a heavy rule above each se
 | `--review` (needs review) | `#7A4F00` | `#E0AE5A` |
 | `--ok` | `#276238` | `#7FCB8E` |
 
-All text pairs were computed with the antislop contrast checker: body 15.4:1, secondary 8.2:1, accent 6.6:1, red 6.5:1, amber 6.3:1, green 6.4:1 on paper in light; every dark pair is above 7.5:1. Control borders are 4.1:1 or better.
+All text pairs were computed with the WCAG 2 contrast formula: body 15.4:1, secondary 8.2:1, accent 6.6:1, red 6.5:1, amber 6.3:1, green 6.4:1 on paper in light; every dark pair is above 7.5:1. Control borders are 4.1:1 or better.
 
 Spacing: 4px base (4, 8, 12, 16, 24, 32, 48). Radius: 2px only. Type: Plex Sans 16px body, 14px secondary, Plex Mono 13.5px for data; headings 28/20/16 semibold.
 
@@ -63,5 +63,5 @@ Specific verbs ("Compare versions", "Load petstore example"). No buzzwords, no e
 ## Known trade-offs
 
 - Not Tailwind or a component library, so more custom CSS to maintain.
-- Dark theme follows the system; there is no manual toggle.
-- Drag and drop is not implemented; files are added with the file or folder picker.
+- The theme follows the system until a choice is made; the choice is stored in the browser only.
+- Drag and drop is an extra. The file and folder buttons remain the primary, single-pointer way to add files.

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -33,14 +34,19 @@ def get_store(request: Request) -> RunStore:
 Store = Annotated[RunStore, Depends(get_store)]
 
 
+def _iso(moment: datetime) -> str:
+    # SQLite returns naive datetimes that were stored as UTC; a browser would read them as local.
+    return (moment if moment.tzinfo else moment.replace(tzinfo=UTC)).isoformat()
+
+
 def _summary(row: RunRow) -> dict:
     return {
         "id": row.id,
         "status": row.status,
         "label_a": row.label_a,
         "label_b": row.label_b,
-        "created_at": row.created_at.isoformat(),
-        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        "created_at": _iso(row.created_at),
+        "finished_at": _iso(row.finished_at) if row.finished_at else None,
         "error_code": row.error_code,
     }
 

@@ -16,7 +16,7 @@ All of these run in `npm run test:e2e` (Chrome) or `npm test`.
 | Forced colors | with `forced-colors: active` the pressed filter, selected change, cited line and classification marks still show |
 | Preferences | reduced motion removes transitions; browser text at 200% and 300% does not scroll sideways; the WCAG 1.4.12 text-spacing override clips and overflows nothing |
 | Reflow and targets | no sideways scroll at 320 px and 375 px; every button and navigation link is at least 44 px high |
-| Color | every text pair was computed with the antislop contrast checker (see `DESIGN.md`); control borders are at least 3:1; confirmed versus inferred and each classification are distinguished by word and shape, never color alone |
+| Color | every text pair was computed with the WCAG 2 contrast formula (see `DESIGN.md`); control borders are at least 3:1; confirmed versus inferred and each classification are distinguished by word and shape, never color alone |
 | Alternative to dragging | drag and drop is an extra; "Add files" and "Add folder" do the same with a single click (WCAG 2.5.7) |
 
 ## What is not verified

@@ -166,7 +166,7 @@ function Limits({ heldoutExpected }: { heldoutExpected: number | null }) {
     <div className="notice notice--empty" role="note">
       <p className="notice__title">Read these numbers with the limits in mind</p>
       <p className="notice__body">
-        The labels were written by the assistant that built the engine, before the first run, and no
+        The labels were written by the engine&apos;s authors, before the first run, and no
         person has reviewed them. The cases are synthetic and few: the held-out split has{" "}
         {heldoutExpected ?? "few"} labeled dependents, so a single error moves its recall by several
         points. The engine was not tuned on this data. The

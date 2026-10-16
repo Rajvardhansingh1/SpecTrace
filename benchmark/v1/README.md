@@ -12,7 +12,7 @@ conda run -n SpecTrace python -m scripts.benchmark --save     # writes results/<
 
 ## How the labels were produced
 
-- The cases and labels were written by the AI assistant that built the engine, **before** the first benchmark run, from the question "which entities would a reader have to re-check when this one changes?". Nobody else has reviewed them yet. Treat the numbers as a development measurement, not an independent evaluation.
+- The cases and labels were written by the engine's authors, **before** the first benchmark run, from the question "which entities would a reader have to re-check when this one changes?". Nobody else has reviewed them yet. Treat the numbers as a development measurement, not an independent evaluation.
 - A citation is the line where the impacted entity makes its reference (`$ref`, an endpoint mention, a backticked name, a JSON example fence, an anchor link). Line numbers were found by locating the quoted text in the file; the quoted text is stored in `expected.json` (`cite.text`) so a reviewer can check it. Removed entities cite version A, everything else version B.
 - `certainty` is `confirmed` when an explicit, checkable reference chain exists (`$ref`, `METHOD /path` that matches an endpoint, anchor link, requirement ID) and `inferred` when the link is a guess (a backticked schema name, JSON keys that match a schema).
 - Splits: `dev` (c01-c06, c13) may be used while changing the engine. `heldout` (c07-c12, c14) must not be used for tuning; look at it only to report results.

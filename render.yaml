@@ -1,0 +1,22 @@
+# Render blueprint for the API. The frontend is deployed on Vercel (project root: frontend).
+services:
+  - type: web
+    name: spectrace-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.4
+      # Supabase session pooler URL (IPv4). Set it in the Render dashboard; it is never committed.
+      - key: SPECTRACE_DATABASE_URL
+        sync: false
+      # JSON list of allowed browser origins, for example ["https://your-app.vercel.app"].
+      - key: SPECTRACE_CORS_ORIGINS
+        sync: false
+      # Render's proxy appends the client address to X-Forwarded-For, so it can be trusted here.
+      - key: SPECTRACE_TRUST_PROXY_HEADERS
+        value: "true"

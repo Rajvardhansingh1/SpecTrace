@@ -2,6 +2,10 @@
   "name": "spectrace-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "SpecTrace web interface",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

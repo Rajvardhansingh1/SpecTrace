@@ -111,3 +111,12 @@ def test_snippet_rejects_unknown_file_traversal_and_bad_lines(v1, v2):
     )
     assert c.get(base, params={**ok, "file": "docs/guide.md", "context": 99}).status_code == 422
     assert c.get("/v1/runs/nope/snippet", params={**ok, "file": "docs/guide.md"}).status_code == 404
+
+
+def test_timestamps_carry_a_timezone_so_browsers_do_not_read_them_as_local(v1, v2):
+    c = client()
+    run = c.post("/v1/runs", json=payload(v1, v2)).json()
+    for stamp in (run["created_at"], run["finished_at"]):
+        assert stamp.endswith("+00:00")
+    listed = c.get("/v1/runs").json()["runs"][0]
+    assert listed["created_at"].endswith("+00:00")

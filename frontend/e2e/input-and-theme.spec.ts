@@ -47,6 +47,9 @@ test.describe("drag and drop", () => {
 
   test("a file dropped outside a box does not make the browser leave the page", async ({ page }) => {
     await page.goto("/");
+    // The listener is attached after hydration; using the page once proves it has happened.
+    await page.getByRole("button", { name: "Load petstore example" }).click();
+    await expect(page.locator("#submit-hint")).toHaveText("Ready to compare.");
     const prevented = await page.evaluate(() => {
       const dt = new DataTransfer();
       dt.items.add(new File(["x"], "a.md"));
