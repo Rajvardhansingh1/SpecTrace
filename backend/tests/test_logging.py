@@ -16,7 +16,9 @@ def logs(caplog):
 
 def client(**overrides) -> TestClient:
     return TestClient(
-        create_app(Settings(_env_file=None, **overrides)), raise_server_exceptions=False
+        create_app(Settings(_env_file=None, **overrides)),
+        raise_server_exceptions=False,
+        headers={"X-Owner-Token": "test-owner-token-0123456789"},
     )
 
 

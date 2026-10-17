@@ -12,7 +12,10 @@ pytestmark = pytest.mark.skipif(not URL, reason="SPECTRACE_TEST_DATABASE_URL not
 
 
 def make_client() -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, database_url=URL)))
+    return TestClient(
+        create_app(Settings(_env_file=None, database_url=URL)),
+        headers={"X-Owner-Token": "test-owner-token-0123456789"},
+    )
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,6 @@
-from pydantic import field_validator
+from typing import Literal
+
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +15,37 @@ class Settings(BaseSettings):
     # Only enable behind a proxy you control (Render): the client IP is then read from the
     # last X-Forwarded-For entry, which that proxy appended. Otherwise clients could spoof it.
     trust_proxy_headers: bool = False
+
+    # ---- language model (optional; everything works without it) ----
+    # "openrouter" and "groq" set the base URL; "openai_compatible" needs llm_base_url.
+    # "test" is a deterministic stand-in for tests and demos and must not be used in production.
+    llm_provider: Literal["none", "openrouter", "groq", "openai_compatible", "test"] = "none"
+    llm_base_url: str | None = None
+    llm_api_key: SecretStr | None = None
+    llm_model: str | None = None
+    llm_timeout_seconds: float = 60.0
+    llm_max_retries: int = 2
+    llm_max_output_tokens: int = 1200
+    # Characters of document text placed in one prompt.
+    llm_context_chars: int = 24_000
+    # Cost guards: calls per owner per hour and per process per day.
+    llm_calls_per_owner_per_hour: int = 30
+    llm_calls_per_day: int = 1000
+
+    # ---- embeddings (optional; without them retrieval is keyword and graph based) ----
+    embedding_provider: Literal[
+        "none", "openrouter", "jina", "openai_compatible", "hashing", "fastembed"
+    ] = "none"
+    embedding_base_url: str | None = None
+    embedding_api_key: SecretStr | None = None
+    embedding_model: str | None = None
+    embedding_batch_size: int = 64
+    embedding_max_chunks_per_run: int = 2000
+
+    @field_validator("llm_base_url", "embedding_base_url")
+    @classmethod
+    def _no_trailing_slash(cls, url: str | None) -> str | None:
+        return url.rstrip("/") if url else None
 
     @field_validator("database_url")
     @classmethod

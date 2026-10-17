@@ -7,12 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import __version__
-from app.adapters.store import RunStore, init_schema, make_engine
+from app.adapters.llm import AI, build_ai
+from app.adapters.store import ChunkStore, RunStore, init_schema, make_engine
 from app.api.ratelimit import SlidingWindowLimiter
 from app.api.v1.runs import router as runs_router
 from app.config import Settings
+from app.core.llm import CallBudget
 from app.errors import SpecTraceError
 from app.logging_config import get_logger
+from app.service import AIService
 
 # Never limited, so platform health checks keep working while a client is throttled.
 _UNLIMITED_PATHS = {"/health"}
@@ -35,7 +38,7 @@ def _client_key(request: Request, trust_proxy: bool) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, ai: AI | None = None) -> FastAPI:
     settings = settings or Settings()
     log = get_logger()
     app = FastAPI(title="SpecTrace", version=__version__)
@@ -111,13 +114,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "X-Owner-Token"],
         expose_headers=["Retry-After", "X-Request-ID"],
     )
 
     engine = make_engine(settings.database_url)
     init_schema(engine)
-    app.state.store = RunStore(engine)
+    store = RunStore(engine)
+    app.state.store = store
+    ai = ai or build_ai(settings)
+    if settings.llm_provider == "test":
+        log.warning(
+            "llm_provider=test is a stand-in for tests and demos; do not use it in production"
+        )
+    app.state.ai_service = AIService(
+        settings,
+        ai,
+        store,
+        ChunkStore(store),
+        CallBudget(settings.llm_calls_per_owner_per_hour, settings.llm_calls_per_day),
+    )
     app.include_router(runs_router)
 
     @app.get("/health")

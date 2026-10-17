@@ -5,7 +5,10 @@ from app.main import create_app
 
 
 def client(**overrides) -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, **overrides)))
+    return TestClient(
+        create_app(Settings(_env_file=None, **overrides)),
+        headers={"X-Owner-Token": "test-owner-token-0123456789"},
+    )
 
 
 def payload(files_a, files_b):

@@ -14,7 +14,10 @@ class FakeClock:
 
 
 def client(**overrides) -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, **overrides)))
+    return TestClient(
+        create_app(Settings(_env_file=None, **overrides)),
+        headers={"X-Owner-Token": "test-owner-token-0123456789"},
+    )
 
 
 def test_limiter_blocks_after_limit_and_reports_retry_after():
