@@ -9,7 +9,7 @@ select ok(
 
 select lives_ok(
   $$insert into public.runs(status, label_a, label_b, files_a, files_b)
-    values ('done', 'v1', 'v2', '{"a.md":"# a"}', '{"a.md":"# b"}')$$,
+    values ('done', 'pgtap-a', 'pgtap-b', '{"a.md":"# a"}', '{"a.md":"# b"}')$$,
   'a valid run can be inserted'
 );
 select throws_ok(
@@ -35,8 +35,9 @@ select throws_ok(
 );
 reset role;
 
+-- Counts only this test's own rows, so data already in the database cannot change the result.
 select is(
-  (select count(*)::int from public.runs where status = 'done'),
+  (select count(*)::int from public.runs where label_a = 'pgtap-a'),
   1,
   'only the valid insert was stored'
 );

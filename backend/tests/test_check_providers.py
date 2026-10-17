@@ -1,13 +1,16 @@
+from pathlib import Path
+
 import httpx
 
 from app.adapters.llm import AI, HashingEmbedder, OpenAICompatChat, TestChat
+from app.config import Settings
 from app.errors import LLMUnavailable
 from scripts import check_providers
 
 
 def test_nothing_configured_is_reported_and_is_a_failure(capsys):
     assert check_providers.check(AI(None, None, "none", "none", [])) == 1
-    assert "No provider is configured" in capsys.readouterr().out
+    assert "Nothing is switched on yet" in capsys.readouterr().out
 
 
 def test_working_local_providers_pass_and_say_nothing_leaves_the_server(capsys):
@@ -35,3 +38,12 @@ def test_a_setup_error_is_reported_cleanly(monkeypatch, capsys):
     monkeypatch.setattr(check_providers, "build_ai", broken)
     assert check_providers.main() == 2
     assert "setup FAIL  llm_unavailable" in capsys.readouterr().out
+
+
+def test_a_copied_example_with_empty_keys_names_the_lines_to_fill(monkeypatch, capsys):
+    example = Path(__file__).resolve().parents[1] / ".env.example"
+    monkeypatch.setattr(check_providers, "Settings", lambda: Settings(_env_file=example))
+    assert check_providers.main() == 1
+    out = capsys.readouterr().out
+    assert "SPECTRACE_LLM_API_KEY is empty" in out
+    assert "SPECTRACE_EMBEDDING_API_KEY" not in out  # that one reuses the chat key

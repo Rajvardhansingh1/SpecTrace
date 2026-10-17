@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -255,7 +256,38 @@ class TestFactory:
         with pytest.raises(LLMUnavailable):
             build_ai(self.settings(llm_provider="openai_compatible", llm_model="m"))
         with pytest.raises(LLMUnavailable):
-            build_ai(self.settings(embedding_provider="jina"))
+            build_ai(self.settings(embedding_provider="jina", embedding_api_key="k"))
+
+    @pytest.mark.parametrize("provider", ["openrouter", "groq"])
+    def test_a_hosted_chat_provider_without_a_key_is_simply_off(self, provider):
+        ai = build_ai(self.settings(llm_provider=provider, llm_model="m"))
+        assert ai.chat is None and ai.recipients == []
+        blank = build_ai(self.settings(llm_provider=provider, llm_model="m", llm_api_key=""))
+        assert blank.chat is None
+
+    def test_a_hosted_embedding_provider_without_a_key_is_simply_off(self):
+        ai = build_ai(self.settings(embedding_provider="jina", embedding_model="m"))
+        assert ai.embedder is None
+
+    def test_openrouter_embeddings_reuse_the_chat_key(self):
+        s = self.settings(
+            llm_provider="openrouter",
+            llm_api_key="K1",
+            llm_model="m",
+            embedding_provider="openrouter",
+            embedding_model="e",
+        )
+        assert build_ai(s).embedder is not None
+        no_key = self.settings(embedding_provider="openrouter", embedding_model="e")
+        assert build_ai(no_key).embedder is None
+
+    def test_a_generic_server_may_run_without_a_key(self):
+        s = self.settings(
+            llm_provider="openai_compatible",
+            llm_base_url="http://localhost:11434/v1",
+            llm_model="m",
+        )
+        assert build_ai(s).chat is not None
 
     def test_the_api_key_is_never_shown_when_settings_are_printed(self):
         s = self.settings(llm_provider="groq", llm_api_key="SECRET-KEY-123", llm_model="m")
@@ -283,3 +315,32 @@ class TestBudget:
         with pytest.raises(BudgetExceeded):
             b.charge("a", calls=4)
         b.charge("a", calls=3)
+
+
+ENV_EXAMPLE = Path(__file__).resolve().parents[1] / ".env.example"
+
+
+class TestEnvExample:
+    """backend/.env.example is meant to be copied to .env and filled in, so it must stay valid."""
+
+    def load(self):
+        return Settings(_env_file=ENV_EXAMPLE)
+
+    def test_it_loads_and_runs_without_any_key(self):
+        settings = self.load()
+        ai = build_ai(settings)
+        assert settings.database_url is None
+        assert ai.chat is None and ai.embedder is None
+
+    def test_adding_only_the_keys_switches_the_features_on(self):
+        filled = Settings(_env_file=ENV_EXAMPLE, llm_api_key="K", embedding_api_key="K")
+        ai = build_ai(filled)
+        assert ai.chat is not None and ai.embedder is not None
+        assert ai.recipients == ["OpenRouter"]
+
+    def test_it_holds_no_real_secret_and_no_placeholder_that_would_break_a_copy(self):
+        text = ENV_EXAMPLE.read_text(encoding="utf-8")
+        assert "<" not in "".join(ln for ln in text.splitlines() if not ln.startswith("#"))
+        for line in text.splitlines():
+            if line.startswith(("SPECTRACE_LLM_API_KEY=", "SPECTRACE_EMBEDDING_API_KEY=")):
+                assert line.endswith("=")

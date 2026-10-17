@@ -167,7 +167,9 @@ Without `SPECTRACE_DATABASE_URL` the API keeps runs in memory, so nothing surviv
 Runs and the chunks with their embeddings are stored in two Postgres tables, defined in [`supabase/migrations`](supabase/migrations) (the second migration enables the `vector` extension). Row level security is enabled with no policies and the public roles are revoked, so the tables are reachable only through the API's own connection.
 
 ```
-supabase start && supabase test db          # local Postgres and the SQL tests (needs Docker)
+supabase start                              # local Postgres (needs Docker running)
+supabase migration up                       # apply any new migrations to it
+supabase test db                            # SQL tests; run `migration up` first, or tests for new tables fail
 supabase link --project-ref <ref> && supabase db push
 ```
 
@@ -175,7 +177,7 @@ Use the **session pooler** connection string for the API (the direct host is IPv
 
 ## Configuration
 
-Set through environment variables or `backend/.env` (see [`backend/.env.example`](backend/.env.example)).
+Set through environment variables or `backend/.env`. Copy [`backend/.env.example`](backend/.env.example) to `backend/.env`: it runs as it is, and pasting an OpenRouter key on the marked line switches the language-model features on.
 
 | Variable | Default | Meaning |
 |---|---|---|

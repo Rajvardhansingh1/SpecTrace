@@ -10,6 +10,7 @@ because a provider can echo the prompt, which holds the submitted documents.
 
 import hashlib
 import json
+import logging
 import math
 import random
 import re
@@ -24,6 +25,11 @@ from app.config import Settings
 from app.core.llm import ChatMessage, ChatModel, Completion, Embedder
 from app.errors import LLMBadOutput, LLMRateLimited, LLMTimeout, LLMUnavailable
 
+log = logging.getLogger("spectrace")
+
+# Hosted services that always need a key. Without one the feature is treated as not configured,
+# so a copied .env.example with the keys still blank leaves the app working without a model.
+KEY_REQUIRED = {"openrouter", "groq", "jina"}
 PRESET_URLS = {
     "openrouter": "https://openrouter.ai/api/v1",
     "groq": "https://api.groq.com/openai/v1",
@@ -307,6 +313,11 @@ def _label(provider: str, base_url: str | None) -> str:
     return urlparse(base_url or "").hostname or "the configured provider"
 
 
+def _secret(value) -> str | None:
+    text = value.get_secret_value() if value else ""
+    return text or None
+
+
 def build_ai(settings: Settings, client: httpx.Client | None = None) -> AI:
     chat: ChatModel | None = None
     embedder: Embedder | None = None
@@ -316,19 +327,22 @@ def build_ai(settings: Settings, client: httpx.Client | None = None) -> AI:
     if provider == "test":
         chat = TestChat()
     elif provider != "none":
+        key = _secret(settings.llm_api_key)
         base = settings.llm_base_url or PRESET_URLS.get(provider)
-        if not base or not settings.llm_model:
-            raise LLMUnavailable("The language model needs a base URL and a model name.")
-        key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-        chat = OpenAICompatChat(
-            base,
-            key,
-            settings.llm_model,
-            timeout=settings.llm_timeout_seconds,
-            retries=settings.llm_max_retries,
-            client=client,
-        )
-        recipients.append(_label(provider, base))
+        if provider in KEY_REQUIRED and not key:
+            log.warning("llm_provider=%s has no API key, so the language model is off", provider)
+        else:
+            if not base or not settings.llm_model:
+                raise LLMUnavailable("The language model needs a base URL and a model name.")
+            chat = OpenAICompatChat(
+                base,
+                key,
+                settings.llm_model,
+                timeout=settings.llm_timeout_seconds,
+                retries=settings.llm_max_retries,
+                client=client,
+            )
+            recipients.append(_label(provider, base))
 
     emb = settings.embedding_provider
     if emb == "hashing":
@@ -336,23 +350,27 @@ def build_ai(settings: Settings, client: httpx.Client | None = None) -> AI:
     elif emb == "fastembed":
         embedder = FastEmbedEmbedder(settings.embedding_model or "BAAI/bge-small-en-v1.5")
     elif emb != "none":
+        # OpenRouter serves both, so one key can cover chat and embeddings.
+        key = _secret(settings.embedding_api_key) or (
+            _secret(settings.llm_api_key) if provider == emb == "openrouter" else None
+        )
         base = settings.embedding_base_url or PRESET_URLS.get(emb)
-        if not base or not settings.embedding_model:
-            raise LLMUnavailable("The embedding service needs a base URL and a model name.")
-        secret = settings.embedding_api_key or (
-            settings.llm_api_key if provider == "openrouter" and emb == "openrouter" else None
-        )
-        embedder = OpenAICompatEmbedder(
-            base,
-            secret.get_secret_value() if secret else None,
-            settings.embedding_model,
-            batch_size=settings.embedding_batch_size,
-            timeout=settings.llm_timeout_seconds,
-            retries=settings.llm_max_retries,
-            client=client,
-        )
-        label = _label(emb, base)
-        if label not in recipients:
-            recipients.append(label)
+        if emb in KEY_REQUIRED and not key:
+            log.warning("embedding_provider=%s has no API key, so embeddings are off", emb)
+        else:
+            if not base or not settings.embedding_model:
+                raise LLMUnavailable("The embedding service needs a base URL and a model name.")
+            embedder = OpenAICompatEmbedder(
+                base,
+                key,
+                settings.embedding_model,
+                batch_size=settings.embedding_batch_size,
+                timeout=settings.llm_timeout_seconds,
+                retries=settings.llm_max_retries,
+                client=client,
+            )
+            label = _label(emb, base)
+            if label not in recipients:
+                recipients.append(label)
 
     return AI(chat, embedder, provider, emb, recipients)

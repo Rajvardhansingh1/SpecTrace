@@ -1,5 +1,5 @@
 begin;
-select plan(9);
+select plan(8);
 
 select has_table('public', 'chunks', 'chunks table exists');
 select has_column('public', 'runs', 'owner_hash', 'runs are owner scoped');
@@ -36,11 +36,5 @@ select is(
   0,
   'deleting a run deletes its chunks'
 );
-select is(
-  (select count(*)::int from public.chunks),
-  0,
-  'nothing else was stored'
-);
-
 select * from finish();
 rollback;

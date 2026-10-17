@@ -8,7 +8,7 @@ no document text is involved. It prints names, sizes and timings, never keys or 
 import sys
 import time
 
-from app.adapters.llm import AI, build_ai
+from app.adapters.llm import AI, KEY_REQUIRED, build_ai
 from app.config import Settings
 from app.core.llm import ChatMessage
 from app.errors import SpecTraceError
@@ -16,9 +16,7 @@ from app.errors import SpecTraceError
 
 def check(ai: AI) -> int:
     if ai.chat is None and ai.embedder is None:
-        print(
-            "No provider is configured. Set SPECTRACE_LLM_PROVIDER or SPECTRACE_EMBEDDING_PROVIDER."
-        )
+        print("Nothing is switched on yet, so there is nothing to check.")
         return 1
     status = 0
     if ai.chat is not None:
@@ -54,12 +52,30 @@ def check(ai: AI) -> int:
     return status
 
 
+def missing_keys(settings: Settings, ai: AI) -> list[str]:
+    """Names the key lines that are empty although their provider needs one."""
+    missing = []
+    if ai.chat is None and settings.llm_provider in KEY_REQUIRED:
+        missing.append("SPECTRACE_LLM_API_KEY")
+    reuses_chat_key = settings.embedding_provider == settings.llm_provider == "openrouter"
+    if ai.embedder is None and settings.embedding_provider in KEY_REQUIRED:
+        # OpenRouter embeddings reuse the chat key, so one pasted key fixes both.
+        if not (reuses_chat_key and "SPECTRACE_LLM_API_KEY" in missing):
+            missing.append("SPECTRACE_EMBEDDING_API_KEY")
+    return missing
+
+
 def main() -> int:
+    settings = Settings()
     try:
-        ai = build_ai(Settings())
+        ai = build_ai(settings)
     except SpecTraceError as exc:
         print(f"setup FAIL  {exc.code}: {exc.message}")
         return 2
+    for name in missing_keys(settings, ai):
+        print(
+            f"{name} is empty in backend/.env, so that part is off. Paste the key after the = sign."
+        )
     return check(ai)
 
 
