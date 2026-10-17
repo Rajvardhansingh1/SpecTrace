@@ -1,6 +1,9 @@
+import { ownerToken } from "./owner";
 import type {
   Answer,
+  Capabilities,
   CreatedRun,
+  Narrative,
   RunDetail,
   RunSummary,
   Snippet,
@@ -13,6 +16,8 @@ export const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:80
 );
 
 const TIMEOUT_MS = 30_000;
+// Calls that wait for a language model can take several provider round trips.
+const MODEL_TIMEOUT_MS = 120_000;
 
 export class ApiError extends Error {
   readonly code: string;
@@ -28,12 +33,20 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = TIMEOUT_MS,
+): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, { ...init, signal: controller.signal });
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { ...(init.headers as Record<string, string>), "X-Owner-Token": ownerToken() },
+      signal: controller.signal,
+    });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiError("timeout", 0, "The request timed out.");
@@ -84,7 +97,7 @@ export function getRun(id: string): Promise<RunDetail> {
 }
 
 export function askRun(id: string, question: string): Promise<Answer> {
-  return request<Answer>(`/v1/runs/${encodeURIComponent(id)}/ask`, json({ question }));
+  return request<Answer>(`/v1/runs/${encodeURIComponent(id)}/ask`, json({ question }), MODEL_TIMEOUT_MS);
 }
 
 export function getSnippet(
@@ -96,4 +109,17 @@ export function getSnippet(
 ): Promise<Snippet> {
   const query = new URLSearchParams({ version, file, line: String(line), context: String(context) });
   return request<Snippet>(`/v1/runs/${encodeURIComponent(id)}/snippet?${query}`);
+}
+
+export function getCapabilities(): Promise<Capabilities> {
+  return request<Capabilities>("/v1/capabilities");
+}
+
+/** Summaries of both versions and of the changes. Slow: it calls the language model. */
+export function createNarrative(id: string, refresh = false): Promise<Narrative> {
+  return request<Narrative>(
+    `/v1/runs/${encodeURIComponent(id)}/narrative`,
+    json({ refresh }),
+    MODEL_TIMEOUT_MS,
+  );
 }

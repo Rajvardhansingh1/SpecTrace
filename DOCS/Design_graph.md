@@ -148,3 +148,22 @@ flowchart LR
 ```
 
 Trust boundary: the browser sends file contents to the API and receives only JSON. The API origin must be in `SPECTRACE_CORS_ORIGINS`; `Retry-After` and `X-Request-ID` are exposed to it. The frontend contains no database URL or key.
+
+## RAG flow (implemented 2026-10-17; live providers untested)
+
+```mermaid
+flowchart TB
+    Q[Question] --> S[AIService]
+    S --> AN[Deterministic analysis: changes, graph, impacts]
+    S --> CH[(chunks + embeddings, Supabase pgvector)]
+    S --> EM[Embedding service]
+    CH --> RT[Hybrid retrieval]
+    EM --> RT
+    AN --> CX[Numbered context, graph facts first]
+    RT --> CX
+    CX --> LM[Language model: OpenRouter or Groq]
+    LM --> CK[Checks: JSON, citations exist, no invented entities]
+    CK --> OUT[Answer with sources, or not enough]
+```
+
+Trust boundaries: document text and questions are untrusted and reach providers only after an explicit click that names the recipient; provider keys exist only in the API's environment; model output is untrusted until the checks pass; a run is readable only with its owner token.

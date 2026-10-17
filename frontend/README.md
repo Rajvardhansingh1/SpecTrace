@@ -34,7 +34,7 @@ The Vercel project root is `frontend/`, so the build cannot read `../samples` or
 | Route | Purpose |
 |---|---|
 | `/` | Add two versions of files (or load the petstore example), compare, browse earlier comparisons |
-| `/runs/[id]` | Change ledger, evidence paths with the cited source lines, source diff, questions |
+| `/runs/[id]` | Optional written summaries, change ledger, evidence paths with the cited source lines, source diff, questions with numbered sources |
 | `/benchmark` | Stored benchmark result with the limits of its labels |
 
 ## Known limits

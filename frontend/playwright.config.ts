@@ -34,6 +34,12 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         SPECTRACE_DATABASE_URL: "",
+        // The deterministic test model and the local embedder exercise the whole retrieval and
+        // answer path without a provider or a key.
+        SPECTRACE_LLM_PROVIDER: "test",
+        SPECTRACE_EMBEDDING_PROVIDER: "hashing",
+        SPECTRACE_LLM_CALLS_PER_OWNER_PER_HOUR: "100000",
+        SPECTRACE_LLM_CALLS_PER_DAY: "1000000",
         SPECTRACE_RATE_LIMIT_HEAVY_PER_MINUTE: "200",
         SPECTRACE_RATE_LIMIT_PER_MINUTE: "2000",
       },

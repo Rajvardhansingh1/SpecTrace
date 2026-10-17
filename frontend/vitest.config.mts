@@ -10,5 +10,8 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
     css: false,
+    // Threads start much faster than forked processes on a machine with little free memory.
+    pool: "threads",
+    maxWorkers: 2,
   },
 });

@@ -20,3 +20,16 @@ services:
       # Render's proxy appends the client address to X-Forwarded-For, so it can be trusted here.
       - key: SPECTRACE_TRUST_PROXY_HEADERS
         value: "true"
+      # Optional language-model features. Leave the provider as none to run without them.
+      - key: SPECTRACE_LLM_PROVIDER
+        value: none
+      - key: SPECTRACE_LLM_API_KEY
+        sync: false
+      - key: SPECTRACE_LLM_MODEL
+        sync: false
+      - key: SPECTRACE_EMBEDDING_PROVIDER
+        value: none
+      - key: SPECTRACE_EMBEDDING_API_KEY
+        sync: false
+      - key: SPECTRACE_EMBEDDING_MODEL
+        sync: false

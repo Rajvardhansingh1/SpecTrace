@@ -154,6 +154,28 @@
 - **Consequences / trade-offs:** In-memory mode serializes requests, which is fine for development and tests. The dark token list is written twice in the CSS and must be kept identical.
 - **Validation / evidence:** `tests/test_store_concurrency.py` failed 3 of 3 before and passes after; 5 consecutive full browser runs with 0 server errors; theme tests in `e2e/input-and-theme.spec.ts`.
 
+## D-016 — Grounded RAG layer on top of the deterministic engine (supersedes D-006 in part)
+- **Date:** 2026-10-17
+- **Status:** Accepted (user direction); live providers not yet exercised
+- **Context / problem:** The product is a RAG use case: summarize both versions, say what changed, answer questions. The deterministic engine alone cannot read prose or take free-form questions. The brief requires that an LLM never creates a confirmed impact and that document text be treated as data.
+- **Decision:** Keep the graph as the source of truth. Add retrieval (BM25 plus pgvector similarity, fused by rank) and a model that explains only what is in a numbered context, with the server verifying every reply (JSON shape, existing citations, no invented entities, no uncited answers). Providers are OpenAI-compatible HTTP endpoints chosen by configuration (OpenRouter or Groq for chat; OpenRouter, Jina, hashing or fastembed for embeddings). Everything degrades: no model means name matching; no embedder means keywords and graph; a failing embedder falls back per request. A comparison is its own knowledge base; the persistent library is a later step.
+- **Why this option:** It adds the missing capability without giving up verifiable evidence. Verification in code is stronger than asking the model to behave. One protocol covers the providers the user named without an SDK dependency.
+- **How it is implemented:** `app/core/{chunking,retrieval,rag,llm}.py`, `app/adapters/{llm,store}.py`, `app/service.py`, `app/api/v1/runs.py`, migration `20261017140003_rag_chunks.sql`, `frontend/components/{SummaryPanel,Sources,AskPanel}.tsx`.
+- **Alternatives considered:** an LLM that also classifies changes and creates links (rejected: breaks the confirmed-versus-inferred guarantee); embeddings only (misses exact names); a vendor SDK (more dependencies, one provider); running a local model by default (memory).
+- **Consequences / trade-offs:** Document text leaves the server when a provider is configured and the visitor clicks (disclosed before the click). Cost is bounded by call budgets but not zero. Answer quality depends on the model and has not been measured. Embeddings tie stored vectors to a model name; changing the model re-embeds.
+- **Validation / evidence:** see "RAG layer" in `State.md`. Hostile-document, bad-output, invented-entity, failing-provider and budget cases are tested.
+
+## D-017 — Anonymous per-browser ownership
+- **Date:** 2026-10-17
+- **Status:** Accepted
+- **Context / problem:** `GET /v1/runs` listed every comparison to anyone who could reach the API, and run ids were therefore discoverable. With uploaded documents and a paid model behind the API that is a data leak and a cost risk.
+- **Decision:** Every `/v1/runs` call needs `X-Owner-Token` (random, 16 to 128 characters). The server stores only its SHA-256 hash on the run; lookups filter by it and a mismatch is reported as not found. The browser creates the token and keeps it in localStorage.
+- **Why this option:** Privacy between visitors without accounts or sign-in. A hash means a database read does not yield usable tokens.
+- **How it is implemented:** `get_owner` in `app/api/v1/runs.py`, `owner_hash` columns and `RunStore` filters, `frontend/lib/owner.ts`.
+- **Alternatives considered:** accounts (large scope, needs an identity provider); signed cookies (cross-site cookie issues between Vercel and Render); leaving it open (rejected).
+- **Consequences / trade-offs:** Possession-based: anyone holding the token has access, clearing site data loses access, and there is no recovery or sharing. Not a replacement for authentication if the app ever needs teams.
+- **Validation / evidence:** `tests/test_api_ai.py` (ownership across every endpoint) and `e2e/rag.spec.ts` (a second browser cannot open, list or read a run).
+
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
 - **Data and benchmark:** Impact-set precision and recall against a hand-labeled benchmark is a primary measure; define dataset construction and labeling before model optimization.

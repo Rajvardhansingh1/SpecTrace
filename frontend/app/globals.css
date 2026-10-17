@@ -636,6 +636,74 @@ input[type="text"]::placeholder {
   border-top: 1px solid var(--rule);
 }
 
+/* ---------- generated text and sources ---------- */
+.cite {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.summary {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-3);
+}
+.summary__part {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+  max-width: 80ch;
+}
+.summary__part > p {
+  margin-top: var(--space-2);
+}
+.summary__start {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  max-width: 70ch;
+}
+.summary__foot {
+  margin-top: var(--space-4);
+  max-width: 80ch;
+}
+.sources {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+.source {
+  border-bottom: 1px solid var(--rule);
+}
+.source summary {
+  cursor: pointer;
+  min-height: var(--tap);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  padding: var(--space-1) 0;
+  overflow-wrap: anywhere;
+}
+.source__text {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.answer__sub {
+  margin: var(--space-4) 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 /* ---------- impacts and evidence ---------- */
 .impacts {
   margin-top: var(--space-3);

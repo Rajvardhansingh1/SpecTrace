@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getRun } from "@/lib/api";
+import { getCapabilities, getRun } from "@/lib/api";
 import { versionResolver } from "@/lib/evidence";
 import { describeError, sortChanges, summarize } from "@/lib/format";
-import type { RunDetail } from "@/lib/types";
+import type { Capabilities, RunDetail } from "@/lib/types";
 import { AskPanel } from "./AskPanel";
 import { ChangeDetail } from "./ChangeDetail";
 import { ChangeList } from "./ChangeList";
 import { Notice } from "./Notice";
+import { SummaryPanel } from "./SummaryPanel";
 
 export function RunView({ id }: { id: string }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +28,18 @@ export function RunView({ id }: { id: string }) {
       live = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    // What the server can do decides which controls appear. If it cannot be read, the plain
+    // comparison still works and the language-model controls stay hidden.
+    let live = true;
+    getCapabilities()
+      .then((c) => live && setCapabilities(c))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     // A title that names the two versions tells screen-reader users and tab lists which page this is.
@@ -104,6 +118,15 @@ export function RunView({ id }: { id: string }) {
         </details>
       ) : null}
 
+      <SummaryPanel
+        key={run.id}
+        runId={run.id}
+        labelA={run.label_a}
+        labelB={run.label_b}
+        capabilities={capabilities}
+        initial={result.narrative}
+      />
+
       {result.changes.length === 0 ? (
         <section className="section">
           <Notice kind="empty" title="No differences found">
@@ -136,7 +159,7 @@ export function RunView({ id }: { id: string }) {
       )}
 
       {/* After the review, so a long answer never pushes the change list out of view. */}
-      <AskPanel runId={run.id} versionOf={versionOf} />
+      <AskPanel runId={run.id} versionOf={versionOf} capabilities={capabilities} />
     </>
   );
 }

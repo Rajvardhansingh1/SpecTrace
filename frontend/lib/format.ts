@@ -62,7 +62,7 @@ export function describeError(error: unknown): string {
     case "network":
       return "The SpecTrace API could not be reached. Check that the backend is running and that NEXT_PUBLIC_API_URL points to it.";
     case "timeout":
-      return "The API took longer than 30 seconds to answer. Try smaller inputs.";
+      return "The API took too long to answer. Try smaller inputs, or try again.";
     case "rate_limited":
       return error.retryAfter
         ? `Too many requests. Try again in ${error.retryAfter} seconds.`
@@ -77,6 +77,18 @@ export function describeError(error: unknown): string {
       return "A YAML or JSON file could not be read. Check its syntax.";
     case "invalid_request":
       return "The request was not valid. Check the version names and files.";
+    case "owner_required":
+      return "This browser could not identify itself to the API. Reload the page; if it repeats, allow site storage.";
+    case "llm_unavailable":
+      return "The language model is not available right now. The comparison itself is unaffected.";
+    case "llm_rate_limited":
+      return "The language model service is busy. Wait a minute and try again.";
+    case "llm_timeout":
+      return "The language model took too long to answer. Try again, or ask something narrower.";
+    case "llm_bad_output":
+      return "The language model replied in a form that could not be used, so nothing is shown. Try again.";
+    case "budget_exceeded":
+      return "The limit for language-model requests has been reached. Try again later.";
     case "not_found":
       return "That comparison does not exist. It may have been removed.";
     case "internal_error":

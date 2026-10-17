@@ -106,7 +106,7 @@ test.describe("announcements", () => {
     await expect(live).toBeEmpty();
     await page.getByLabel("Question").fill("What breaks if Pet changes?");
     await page.getByRole("button", { name: "Ask" }).click();
-    await expect(live.getByRole("heading", { name: "Impacts found" })).toBeVisible();
+    await expect(live.getByRole("heading", { name: "Answer", exact: true })).toBeVisible();
   });
 });
 
@@ -117,7 +117,7 @@ test.describe("keyboard order and focus", () => {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
     const stops: { name: string; top: number; outline: string; visible: boolean; position: number }[] = [];
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 160; i++) {
       await page.keyboard.press("Tab");
       const info = await page.evaluate(() => {
         const el = document.activeElement as HTMLElement | null;
@@ -259,7 +259,7 @@ test.describe("axe with a manual theme that differs from the system theme", () =
       await expect(page.locator(".snippet__line--cited").first()).toBeVisible();
       await page.getByLabel("Question").fill("What breaks if Pet changes?");
       await page.getByRole("button", { name: "Ask" }).click();
-      await expect(page.getByRole("heading", { name: "Impacts found" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Answer", exact: true })).toBeVisible();
       await axe(page, "run");
       await page.goto("/benchmark");
       await axe(page, "benchmark");

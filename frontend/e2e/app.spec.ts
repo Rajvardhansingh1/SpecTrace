@@ -46,7 +46,7 @@ test.describe("main flow", () => {
     await compareSample(page);
     await page.getByLabel("Question").fill("What breaks if Pet changes?");
     await page.getByRole("button", { name: "Ask" }).click();
-    await expect(page.getByRole("heading", { name: "Impacts found" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Answer", exact: true })).toBeVisible();
     await expect(page.locator(".answer li.impact").first()).toBeVisible();
 
     await page.getByLabel("Question").fill("What about the moon?");
@@ -218,7 +218,7 @@ test.describe("accessibility with axe", () => {
       await expect(page.locator(".snippet__line--cited").first()).toBeVisible();
       await page.getByLabel("Question").fill("What breaks if Pet changes?");
       await page.getByRole("button", { name: "Ask" }).click();
-      await expect(page.getByRole("heading", { name: "Impacts found" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Answer", exact: true })).toBeVisible();
       await scan("run, with evidence and answer");
       await page.goto("/benchmark");
       await scan("benchmark");
@@ -235,7 +235,7 @@ test.describe("small screens", () => {
     const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     const smallTargets = () =>
       page.evaluate(() =>
-        [...document.querySelectorAll<HTMLElement>("button, nav a, input[type=text]")]
+        [...document.querySelectorAll<HTMLElement>("button, nav a, input[type=text], summary")]
           .filter((el) => el.offsetParent !== null)
           .map((el) => ({ text: (el.textContent || el.getAttribute("aria-label") || el.tagName).trim().slice(0, 30), h: el.getBoundingClientRect().height }))
           .filter((t) => t.h < 43.5),

@@ -48,7 +48,46 @@ export interface GraphEntity {
   location: Location;
 }
 
+export interface Citation {
+  id: string;
+  kind: "change" | "impact" | "chunk" | "outline";
+  title: string;
+  text: string;
+  file: string | null;
+  line_start: number | null;
+  line_end: number | null;
+  version: "a" | "b" | null;
+  via: string | null;
+  similarity: number | null;
+}
+
+/** Text written by the language model, after the server has checked it against its sources. */
+export interface Generated {
+  status: "answered" | "uncertain";
+  text: string;
+  citations: Citation[];
+  warnings: string[];
+  truncated: boolean;
+}
+
+export interface Narrative {
+  version_a: Generated;
+  version_b: Generated;
+  changes: Generated;
+  model: string;
+  sent_to: string[];
+  generated_at: string;
+}
+
+export interface Capabilities {
+  llm: { enabled: boolean; model: string | null };
+  embeddings: { enabled: boolean; model: string | null };
+  /** Who receives document text. Empty means nothing leaves the server. */
+  sends_documents_to: string[];
+}
+
 export interface RunResult {
+  narrative?: Narrative;
   changes: Change[];
   impacts: Record<string, Impact[]>;
   graph: { entities: GraphEntity[]; edges_a: Edge[]; edges_b: Edge[] };
@@ -80,6 +119,14 @@ export interface Answer {
   matched: string[];
   impacts: Impact[];
   reason: string;
+  /** Set only when a language model wrote the answer. */
+  answer: string | null;
+  citations: Citation[];
+  generated: boolean;
+  model: string | null;
+  warnings: string[];
+  truncated: boolean;
+  retrieval: { chunks: number; semantic: boolean; items: number } | null;
 }
 
 export interface Snippet {
