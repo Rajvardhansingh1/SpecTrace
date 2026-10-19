@@ -149,7 +149,7 @@ flowchart LR
 
 Trust boundary: the browser sends file contents to the API and receives only JSON. The API origin must be in `SPECTRACE_CORS_ORIGINS`; `Retry-After` and `X-Request-ID` are exposed to it. The frontend contains no database URL or key.
 
-## RAG flow (implemented 2026-10-17; live providers untested)
+## RAG flow (implemented 2026-10-17; OpenRouter exercised live 2026-10-19; Groq and Jina untested)
 
 ```mermaid
 flowchart TB
@@ -161,9 +161,12 @@ flowchart TB
     EM --> RT
     AN --> CX[Numbered context, graph facts first]
     RT --> CX
-    CX --> LM[Language model: OpenRouter or Groq]
+    CX --> LM[Language model: ordered fallback list, OpenRouter or Groq]
     LM --> CK[Checks: JSON, citations exist, no invented entities]
+    CK -->|not JSON, once| LM
     CK --> OUT[Answer with sources, or not enough]
 ```
 
 Trust boundaries: document text and questions are untrusted and reach providers only after an explicit click that names the recipient; provider keys exist only in the API's environment; model output is untrusted until the checks pass; a run is readable only with its owner token.
+
+Fallback and retry edges (2026-10-19): inside `LM`, a model that is rate limited, times out, or returns unusable or truncated output hands over to the next model in the configured list; an authentication error stops the chain. The single `CK -> LM` retry is charged to the per-owner call budget. When all models fail the API returns `llm_rate_limited` (429) or the relevant stable error, never a fabricated answer.

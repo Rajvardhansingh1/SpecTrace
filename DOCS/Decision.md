@@ -156,7 +156,7 @@
 
 ## D-016 — Grounded RAG layer on top of the deterministic engine (supersedes D-006 in part)
 - **Date:** 2026-10-17
-- **Status:** Accepted (user direction); live providers not yet exercised
+- **Status:** Accepted (user direction); OpenRouter exercised live on 2026-10-19 (see D-018); Groq and Jina not yet
 - **Context / problem:** The product is a RAG use case: summarize both versions, say what changed, answer questions. The deterministic engine alone cannot read prose or take free-form questions. The brief requires that an LLM never creates a confirmed impact and that document text be treated as data.
 - **Decision:** Keep the graph as the source of truth. Add retrieval (BM25 plus pgvector similarity, fused by rank) and a model that explains only what is in a numbered context, with the server verifying every reply (JSON shape, existing citations, no invented entities, no uncited answers). Providers are OpenAI-compatible HTTP endpoints chosen by configuration (OpenRouter or Groq for chat; OpenRouter, Jina, hashing or fastembed for embeddings). Everything degrades: no model means name matching; no embedder means keywords and graph; a failing embedder falls back per request. A comparison is its own knowledge base; the persistent library is a later step.
 - **Why this option:** It adds the missing capability without giving up verifiable evidence. Verification in code is stronger than asking the model to behave. One protocol covers the providers the user named without an SDK dependency.
@@ -175,6 +175,28 @@
 - **Alternatives considered:** accounts (large scope, needs an identity provider); signed cookies (cross-site cookie issues between Vercel and Render); leaving it open (rejected).
 - **Consequences / trade-offs:** Possession-based: anyone holding the token has access, clearing site data loses access, and there is no recovery or sharing. Not a replacement for authentication if the app ever needs teams.
 - **Validation / evidence:** `tests/test_api_ai.py` (ownership across every endpoint) and `e2e/rag.spec.ts` (a second browser cannot open, list or read a run).
+
+## D-018 — Model fallback chain and output hardening for free providers
+- **Date:** 2026-10-19
+- **Status:** Accepted; validated against live OpenRouter on one synthetic sample
+- **Context / problem:** Live use of free OpenRouter models showed empty replies from reasoning models, upstream 429s on individual models, truncated or non-JSON replies, and a wrong "nothing is stale" answer when the changes were missing from the context.
+- **Decision:** `SPECTRACE_LLM_MODEL` takes an ordered, comma-separated list. A model that is rate limited, times out, or returns unusable or truncated output hands over to the next one; an authentication failure stops at once. Output budget default 3000 tokens. The context always carries the changes once a question touches the documents, identical passages from both versions are merged, and a reply that is not valid JSON gets exactly one corrective retry charged to the call budget. An abstention without text is reported as `uncertain`.
+- **Why this option:** The free pool is shared and unstable, so one fixed model is fragile; a short ordered list keeps the free-key goal. Fixes belong in code and tests, not in hoping the model behaves.
+- **How it is implemented:** `app/adapters/llm.py` (`OpenAICompatChat`, `build_ai`), `app/core/rag.py` (`build_context`, `_merge_identical`, `_ask_json`, `_check`), `app/service.py` (retry charged via `on_retry`), `backend/.env.example` (default list).
+- **Alternatives considered:** the `openrouter/free` router (rejected: unpredictable model, empty replies); a paid model only (rejected: the user wants free keys); unbounded retries (rejected: cost and abuse).
+- **Consequences / trade-offs:** Different models may answer different questions, so wording varies and the routed model is recorded per reply; more calls are possible per question (bounded); model ids on the free list change and need occasional updating.
+- **Validation / evidence:** unit tests for fallback, truncation, retry bound, abstention and context building (`tests/test_ai_adapters.py`, `tests/test_rag_core.py`); live end-to-end run on 2026-10-19 (see the Live provider run section in `State.md`).
+
+## D-019 — What is published, and under which license
+- **Date:** 2026-10-19
+- **Status:** Accepted (user direction); history rewrite pending
+- **Context / problem:** The repository must look production-grade on GitHub and must not publish the development instruction files or assistant configuration.
+- **Decision:** Ignore `DOCS/`, assistant configuration files, secrets, caches and build output at the root, and ignore `frontend/DESIGN.md` and `frontend/ACCESSIBILITY.md`; keep the READMEs, benchmark and sample documents (they are product data). Rewrite the README as product documentation. License the project under MIT.
+- **Why this option:** Instruction files are working notes, not product material; MIT is permissive and common. The user chose both.
+- **How it is implemented:** `.gitignore`, `frontend/.gitignore`, `README.md`, `LICENSE`; links to the ignored files removed.
+- **Alternatives considered:** publish DOCS (rejected by the user); no license (rejected: unusable by others).
+- **Consequences / trade-offs:** Ignoring does not remove tracked files or old commits; until the history is rewritten, pushing would publish the notes. The copyright holder name is unconfirmed.
+- **Validation / evidence:** `git check-ignore` confirms the rules; the history rewrite and a clean-clone check are not yet done.
 
 ## Project-specific decisions to resolve before implementation
 - **Problem and scope:** Use the MVP defined in `Prompt.md`; do not add unrelated features.
