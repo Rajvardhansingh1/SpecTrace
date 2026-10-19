@@ -1,6 +1,6 @@
 # SpecTrace frontend
 
-Next.js (App Router, TypeScript) client for the SpecTrace API. Design direction and tokens: [DESIGN.md](DESIGN.md).
+Next.js (App Router, TypeScript) client for the SpecTrace API.
 
 ## Run it
 
@@ -39,6 +39,6 @@ The Vercel project root is `frontend/`, so the build cannot read `../samples` or
 
 ## Known limits
 
-- Accessibility is checked by automated tests only; no real screen reader or user testing yet (see [ACCESSIBILITY.md](ACCESSIBILITY.md)).
+- Accessibility is checked by automated tests only; no real screen reader or user testing yet.
 - Tests run in Chrome only.
 - Not deployed. The Vercel build and the production CORS origin are unverified.

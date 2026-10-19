@@ -251,6 +251,40 @@ class TestAsk:
         assert "SECRET-QUESTION" not in caplog.text and "Petstore" not in caplog.text
 
 
+class RoutedChat:
+    """Like a router: every call is answered by a different underlying model."""
+
+    name = "router/free"
+
+    def __init__(self):
+        self.calls = 0
+        self.inner = TestChat()
+
+    def complete(self, messages, *, max_tokens, temperature=0.1):
+        self.calls += 1
+        out = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature)
+        return Completion(out.text, model=f"vendor/model-{self.calls % 2}")
+
+
+class TestRoutedModels:
+    def test_the_models_that_really_wrote_the_summary_are_named_not_the_router(self, v1, v2):
+        c = make(chat=RoutedChat())
+        rid = run_id(c, v1, v2)
+        out = c.post(f"/v1/runs/{rid}/narrative", json={}).json()
+        assert out["model"] == "vendor/model-0, vendor/model-1"
+        assert "router/free" not in out["model"]
+        assert {out[p]["model"] for p in ("version_a", "version_b", "changes")} <= {
+            "vendor/model-0",
+            "vendor/model-1",
+        }
+
+    def test_an_answer_names_the_model_that_wrote_it(self, v1, v2):
+        c = make(chat=RoutedChat())
+        rid = run_id(c, v1, v2)
+        out = c.post(f"/v1/runs/{rid}/ask", json={"question": "What breaks if Pet changes?"}).json()
+        assert out["model"].startswith("vendor/model-")
+
+
 class TestNarrative:
     def test_it_needs_a_configured_model(self, v1, v2):
         c = make()

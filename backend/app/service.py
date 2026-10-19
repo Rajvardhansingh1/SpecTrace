@@ -41,6 +41,7 @@ def _part(out: Generated) -> dict[str, Any]:
         "citations": [asdict(c) for c in out.citations],
         "warnings": out.warnings,
         "truncated": out.truncated,
+        "model": out.model,
     }
 
 
@@ -134,8 +135,12 @@ class AIService:
         self._budget.charge(owner, 3)
         analysis = analyze(row.files_a, row.files_b)
         s = self._settings
-        common = {"max_chars": s.llm_context_chars, "max_tokens": s.llm_max_output_tokens}
-        narrative = {
+        common = {
+            "max_chars": s.llm_context_chars,
+            "max_tokens": s.llm_max_output_tokens,
+            "on_retry": lambda: self._budget.charge(owner),
+        }
+        parts = {
             "version_a": _part(
                 summarize_version(
                     chat, row.label_a, chunk_entities(analysis.graph_a.entities, "a"), **common
@@ -151,7 +156,12 @@ class AIService:
                     chat, row.label_a, row.label_b, analysis.changes, analysis.impacts, **common
                 )
             ),
-            "model": chat.name,
+        }
+        # A router can send each call to a different model, so name every model that wrote a part.
+        used = sorted({p["model"] for p in parts.values() if p["model"]}) or [chat.name]
+        narrative = {
+            **parts,
+            "model": ", ".join(used),
             "sent_to": self._ai.recipients,
             "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
@@ -221,7 +231,7 @@ class AIService:
             answer=out.text,
             citations=[asdict(c) for c in out.citations],
             generated=True,
-            model=chat.name,
+            model=out.model or chat.name,
             warnings=[*response["warnings"], *out.warnings],
             truncated=out.truncated,
             retrieval={

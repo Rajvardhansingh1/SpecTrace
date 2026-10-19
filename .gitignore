@@ -1,32 +1,62 @@
-# Local notes and tooling are never published.
-DOCS/
+# ---- Secrets and local configuration ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# ---- Test output ----
+test-results/
+playwright-report/
+blob-report/
+coverage/
+
+# ---- Local data ----
+*.sqlite
+*.sqlite3
+*.db
+supabase/.temp/
+supabase/.branches/
+
+# ---- Editors and operating systems ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Local working notes and AI-assistant files (never published) ----
+/DOCS/
 .claude/
 .agents/
 .planning/
+.cursor/
+.cursorrules
+.windsurf/
+.github/copilot-instructions.md
 CLAUDE.md
 AGENTS.md
 GEMINI.md
 *.bundle
-
-# Secrets
-.env
-.env.*
-!.env.example
-
-# Python
-__pycache__/
-*.pyc
-.pytest_cache/
-.ruff_cache/
-.coverage
-.venv/
-venv/
-
-# Node
-node_modules/
-.next/
-
-# Misc
-*.sqlite3
-.DS_Store
-Thumbs.db

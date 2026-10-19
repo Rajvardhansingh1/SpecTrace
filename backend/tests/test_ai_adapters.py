@@ -121,6 +121,24 @@ class TestChatAdapter:
         with pytest.raises(LLMUnavailable):
             chat(down, retries=0).complete(MSG, max_tokens=5)
 
+    def test_the_model_that_really_answered_and_the_finish_reason_are_reported(self):
+        body = {
+            "model": "vendor/routed-model:free",
+            "choices": [{"finish_reason": "stop", "message": {"content": "hi"}}],
+        }
+        result = chat(lambda r: httpx.Response(200, json=body)).complete(MSG, max_tokens=5)
+        assert result.model == "vendor/routed-model:free" and result.finish_reason == "stop"
+
+    def test_an_empty_reply_cut_off_by_the_limit_explains_how_to_fix_it(self):
+        body = {"choices": [{"finish_reason": "length", "message": {"content": None}}]}
+        with pytest.raises(LLMBadOutput) as err:
+            chat(lambda r: httpx.Response(200, json=body)).complete(MSG, max_tokens=5)
+        assert "SPECTRACE_LLM_MAX_OUTPUT_TOKENS" in err.value.message
+        plain = {"choices": [{"finish_reason": "stop", "message": {"content": ""}}]}
+        with pytest.raises(LLMBadOutput) as other:
+            chat(lambda r: httpx.Response(200, json=plain)).complete(MSG, max_tokens=5)
+        assert "MAX_OUTPUT_TOKENS" not in other.value.message
+
     @pytest.mark.parametrize(
         "response",
         [
@@ -344,3 +362,100 @@ class TestEnvExample:
         for line in text.splitlines():
             if line.startswith(("SPECTRACE_LLM_API_KEY=", "SPECTRACE_EMBEDDING_API_KEY=")):
                 assert line.endswith("=")
+
+
+class TestModelFallback:
+    def make(self, handler, models=("m1", "m2", "m3"), retries=2):
+        return OpenAICompatChat(
+            "https://example.test/v1",
+            "K",
+            list(models),
+            retries=retries,
+            client=client_for(handler),
+            sleep=lambda s: None,
+        )
+
+    def test_the_next_model_answers_when_the_first_is_rate_limited(self):
+        asked = []
+
+        def handler(request):
+            model = json.loads(request.content)["model"]
+            asked.append(model)
+            if model == "m1":
+                return httpx.Response(429, text="upstream rate limited")
+            return ok_chat("from " + model)
+
+        out = self.make(handler).complete(MSG, max_tokens=5)
+        assert out.text == "from m2" and out.model == "m2"
+        # One retry on the struggling model, not the full number.
+        assert asked == ["m1", "m1", "m2"]
+
+    def test_a_missing_or_empty_model_also_falls_through(self):
+        def handler(request):
+            model = json.loads(request.content)["model"]
+            if model == "m1":
+                return httpx.Response(404)
+            if model == "m2":
+                return ok_chat("   ")
+            return ok_chat("third")
+
+        assert self.make(handler).complete(MSG, max_tokens=5).text == "third"
+
+    def test_a_rejected_key_stops_at_once_without_trying_other_models(self):
+        asked = []
+
+        def handler(request):
+            asked.append(json.loads(request.content)["model"])
+            return httpx.Response(401)
+
+        with pytest.raises(LLMUnavailable):
+            self.make(handler).complete(MSG, max_tokens=5)
+        assert asked == ["m1"]
+
+    def test_when_every_model_is_rate_limited_the_message_says_so(self):
+        with pytest.raises(LLMRateLimited) as err:
+            self.make(lambda r: httpx.Response(429)).complete(MSG, max_tokens=5)
+        assert "All 3 configured models are rate limited" in err.value.message
+
+    def test_mixed_failures_report_the_last_one(self):
+        def handler(request):
+            model = json.loads(request.content)["model"]
+            return httpx.Response(429) if model != "m3" else httpx.Response(503)
+
+        with pytest.raises(LLMUnavailable) as err:
+            self.make(handler).complete(MSG, max_tokens=5)
+        assert "HTTP 503" in err.value.message
+
+    def test_one_model_keeps_the_full_retries_and_its_plain_name(self):
+        calls = []
+
+        def handler(request):
+            calls.append(1)
+            return httpx.Response(429)
+
+        single = self.make(handler, models=("only",), retries=2)
+        with pytest.raises(LLMRateLimited):
+            single.complete(MSG, max_tokens=5)
+        assert len(calls) == 3 and single.name == "only"
+
+    def test_the_name_shows_the_fallbacks(self):
+        assert self.make(lambda r: ok_chat(), models=("a", "b", "c")).name == "a (+2 fallback)"
+
+    def test_a_comma_separated_setting_becomes_an_ordered_list(self):
+        s = Settings(
+            _env_file=None, llm_provider="groq", llm_api_key="k", llm_model=" first , second ,"
+        )
+        assert build_ai(s).chat.models == ["first", "second"]
+
+
+class TestCutOffReplies:
+    def test_a_reply_cut_off_by_the_limit_moves_on_to_the_next_model(self):
+        def handler(request):
+            model = json.loads(request.content)["model"]
+            if model == "m1":
+                cut = {"finish_reason": "length", "message": {"content": '{"a": "unfinished'}}
+                return httpx.Response(200, json={"choices": [cut]})
+            return ok_chat("complete")
+
+        out = TestModelFallback().make(handler).complete(MSG, max_tokens=5)
+        assert out.text == "complete" and out.model == "m2"

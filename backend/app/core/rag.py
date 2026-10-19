@@ -68,6 +68,8 @@ TASK_ANSWER = (
     "TASK:answer\n"
     'Answer the question. JSON shape: {"answer": string, "citations": ["C1"], "abstain": boolean}. '
     "Set abstain to true and explain what is missing when the context cannot answer it. "
+    "Items of kind change and impact state what changed between the versions. A passage that still "
+    "describes the old behavior of something that changed is out of date, and you may say so. "
     "Keep the answer under 200 words.\n"
 )
 TASK_SUMMARY_VERSION = (
@@ -106,6 +108,8 @@ class Generated:
     citations: list[ContextItem]
     warnings: list[str] = field(default_factory=list)
     truncated: bool = False
+    #: The model that wrote it, when the provider says which one answered.
+    model: str | None = None
 
 
 # ---------------------------------------------------------------------------- context building
@@ -193,6 +197,23 @@ def _numbered(items: list[ContextItem], max_chars: int) -> tuple[list[ContextIte
     return kept, False
 
 
+def _merge_identical(hits: list[Retrieved]) -> list[ContextItem]:
+    """One item per passage. A passage that reads the same in both versions is shown once."""
+    items: list[ContextItem] = []
+    index: dict[tuple[str, str], int] = {}
+    for hit in hits:
+        item = chunk_item(hit)
+        key = (item.title, hit.chunk.text)
+        if key in index:
+            earlier = items[index[key]]
+            if earlier.version != item.version:
+                items[index[key]] = ContextItem(**{**earlier.__dict__, "version": "both"})
+            continue
+        index[key] = len(items)
+        items.append(item)
+    return items
+
+
 def build_context(
     question: str,
     result: "AnalysisResult",
@@ -200,30 +221,35 @@ def build_context(
     *,
     max_chars: int,
     max_changes: int = 12,
+    impacts_per_change: int = 6,
 ) -> tuple[list[ContextItem], bool]:
-    """Deterministic facts about the named entities first, then the retrieved passages."""
+    """Facts from the graph first, then the retrieved passages.
+
+    Once a question touches the documents at all (a named entity, a retrieved passage, or words
+    about change), the full list of changes is included. The model cannot say that documentation
+    is out of date unless it can see what changed, and a question such as "which docs describe the
+    pet identifier wrongly?" names nothing that matches an entity exactly.
+    """
     entities = {**result.graph_a.entities, **result.graph_b.entities}
-    changes = {c.key: c for c in result.changes}
     named = {
         key
         for key, e in entities.items()
-        if re.search(rf"(?<![\w/]){re.escape(e.name)}(?![\w/])", question)
+        if re.search(rf"(?<![\w/]){re.escape(e.name)}(?![\w/])", question, re.I)
     }
 
     items: list[ContextItem] = []
-    seen: set[str] = set()
-    for key in sorted(named & changes.keys()):
-        change = changes[key]
-        impacts = result.impacts.get(key, [])
-        items.append(change_item(change, impacts))
-        items.extend(impact_item(i) for i in impacts[:6])
-        seen.add(key)
-    if _ASKS_ABOUT_CHANGES.search(question):
-        for change in sorted(result.changes, key=lambda c: (_SEVERITY[c.classification], c.key)):
-            if change.key not in seen and len(seen) < max_changes:
-                items.append(change_item(change, result.impacts.get(change.key, [])))
-                seen.add(change.key)
-    items.extend(chunk_item(h) for h in retrieved)
+    if named or retrieved or _ASKS_ABOUT_CHANGES.search(question):
+        ordered = sorted(
+            result.changes, key=lambda c: (c.key not in named, _SEVERITY[c.classification], c.key)
+        )
+        for change in ordered[:max_changes]:
+            impacts = result.impacts.get(change.key, [])
+            items.append(change_item(change, impacts))
+            # Dependents are listed for what the question names, and for everything when only a
+            # few things changed.
+            if change.key in named or len(result.changes) <= 3:
+                items.extend(impact_item(i) for i in impacts[:impacts_per_change])
+    items.extend(_merge_identical(retrieved))
     return _numbered(items, max_chars)
 
 
@@ -276,9 +302,35 @@ def parse_json_object(text: str) -> dict:
     return value
 
 
+def _ask_json(chat: ChatModel, messages: list[ChatMessage], max_tokens: int, on_retry=None):
+    """The reply and its parsed JSON. A reply that is not JSON gets one corrective retry."""
+    reply = chat.complete(messages, max_tokens=max_tokens)
+    try:
+        return reply, parse_json_object(reply.text)
+    except LLMBadOutput:
+        if on_retry is not None:
+            on_retry()
+        again = [
+            *messages,
+            ChatMessage(
+                "user",
+                "Your last reply was not one valid JSON object. Reply again with exactly one "
+                "JSON object in the requested shape and nothing else.",
+            ),
+        ]
+        reply = chat.complete(again, max_tokens=max_tokens)
+        return reply, parse_json_object(reply.text)
+
+
 def _check(data: dict, items: list[ContextItem], text_key: str, *, may_abstain: bool) -> Generated:
     known = {i.id: i for i in items}
     raw_text = data.get(text_key)
+    if (
+        may_abstain
+        and data.get("abstain") is True
+        and not (isinstance(raw_text, str) and raw_text.strip())
+    ):
+        return Generated("uncertain", "The documents do not contain enough to answer this.", [])
     if not isinstance(raw_text, str) or not raw_text.strip():
         raise LLMBadOutput("The model reply had no text.")
     text = raw_text.strip()[:MAX_ANSWER_CHARS]
@@ -330,6 +382,7 @@ def answer_question(
     *,
     truncated: bool,
     max_tokens: int,
+    on_retry=None,
 ) -> Generated:
     question = question.strip()[:MAX_QUESTION_CHARS]
     if not items:
@@ -342,9 +395,10 @@ def answer_question(
     tail = (
         f'<question token="{nonce}">{clean_untrusted(question, nonce)}</question token="{nonce}">'
     )
-    reply = chat.complete(_messages(TASK_ANSWER, items, tail, nonce), max_tokens=max_tokens)
-    out = _check(parse_json_object(reply.text), items, "answer", may_abstain=True)
+    reply, data = _ask_json(chat, _messages(TASK_ANSWER, items, tail, nonce), max_tokens, on_retry)
+    out = _check(data, items, "answer", may_abstain=True)
     out.truncated = truncated
+    out.model = reply.model
     return out
 
 
@@ -374,18 +428,25 @@ def outline_items(chunks: list[Chunk], max_chars: int) -> tuple[list[ContextItem
 
 
 def summarize_version(
-    chat: ChatModel, label: str, chunks: list[Chunk], *, max_chars: int, max_tokens: int
+    chat: ChatModel,
+    label: str,
+    chunks: list[Chunk],
+    *,
+    max_chars: int,
+    max_tokens: int,
+    on_retry=None,
 ) -> Generated:
     items, truncated = outline_items(chunks, max_chars)
     if not items:
         return Generated("uncertain", "This version has no readable content to summarize.", [])
     nonce = secrets.token_hex(8)
     tail = f"Version label: {clean_untrusted(label, nonce)}. Summarize this version."
-    reply = chat.complete(
-        _messages(TASK_SUMMARY_VERSION, items, tail, nonce), max_tokens=max_tokens
+    reply, data = _ask_json(
+        chat, _messages(TASK_SUMMARY_VERSION, items, tail, nonce), max_tokens, on_retry
     )
-    out = _check(parse_json_object(reply.text), items, "summary", may_abstain=False)
+    out = _check(data, items, "summary", may_abstain=False)
     out.truncated = truncated
+    out.model = reply.model
     return out
 
 
@@ -398,6 +459,7 @@ def summarize_changes(
     *,
     max_chars: int,
     max_tokens: int,
+    on_retry=None,
 ) -> Generated:
     if not changes:
         return Generated("answered", "No differences were found between the two versions.", [], [])
@@ -412,9 +474,10 @@ def summarize_changes(
         f"Version A is {clean_untrusted(label_a, nonce)}; version B is "
         f"{clean_untrusted(label_b, nonce)}. Explain what changed."
     )
-    reply = chat.complete(
-        _messages(TASK_SUMMARY_CHANGES, items, tail, nonce), max_tokens=max_tokens
+    reply, data = _ask_json(
+        chat, _messages(TASK_SUMMARY_CHANGES, items, tail, nonce), max_tokens, on_retry
     )
-    out = _check(parse_json_object(reply.text), items, "summary", may_abstain=False)
+    out = _check(data, items, "summary", may_abstain=False)
     out.truncated = truncated
+    out.model = reply.model
     return out

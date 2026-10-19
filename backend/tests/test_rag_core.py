@@ -181,7 +181,42 @@ class TestContext:
 
     def test_a_general_question_includes_the_changes_even_without_a_name(self, result):
         items, _ = build_context("what changed between the versions?", result, [], max_chars=20_000)
-        assert [i.title for i in items] == ["schema:Pet"]
+        assert items[0].title == "schema:Pet" and items[0].kind == "change"
+        # Only one thing changed, so its dependents are listed too.
+        assert any(i.kind == "impact" for i in items)
+
+    def test_a_paraphrase_that_names_nothing_exactly_still_gets_the_changes(self, result):
+        # "pet identifier" matches no entity name by itself, but passages were retrieved for it.
+        question = "Which sections describe the pet identifier?"
+        hits = retrieve(question, chunk_entities(result.graph_b.entities, "b"))
+        assert hits
+        items, _ = build_context(question, result, hits, max_chars=20_000)
+        assert items[0].kind == "change" and items[0].title == "schema:Pet"
+
+    def test_names_match_whatever_the_capitalization(self, result):
+        items, _ = build_context("tell me about pet", result, [], max_chars=20_000)
+        assert items and items[0].title == "schema:Pet"
+
+    def test_a_passage_that_reads_the_same_in_both_versions_is_shown_once(self, result):
+        both = chunk_entities(result.graph_a.entities, "a") + chunk_entities(
+            result.graph_b.entities, "b"
+        )
+        question = "Which section describes GET /owners?"
+        hits = retrieve(question, both, top_k=8)
+        owners = [h for h in hits if h.chunk.key == "section:docs/guide.md#owners"]
+        assert len(owners) == 2  # one from each version, with identical text
+        items, _ = build_context(question, result, hits, max_chars=20_000)
+        merged = [i for i in items if i.title == "section:docs/guide.md#owners"]
+        assert len(merged) == 1 and merged[0].version == "both"
+
+    def test_a_changed_passage_is_kept_once_per_version(self, result):
+        both = chunk_entities(result.graph_a.entities, "a") + chunk_entities(
+            result.graph_b.entities, "b"
+        )
+        hits = retrieve("schema Pet properties", both, top_k=8)
+        items, _ = build_context("schema Pet properties", result, hits, max_chars=20_000)
+        pets = [i for i in items if i.title == "schema:Pet" and i.kind == "chunk"]
+        assert {i.version for i in pets} == {"a", "b"}
 
     def test_an_unrelated_question_gets_no_graph_facts(self, result):
         items, _ = build_context("hello there", result, [], max_chars=20_000)
@@ -367,3 +402,67 @@ def test_the_sample_files_used_here_exist():
     assert (
         Path(__file__).resolve().parents[2] / "samples" / "petstore" / "v1" / "openapi.yaml"
     ).exists()
+
+
+class SequenceChat:
+    """Returns the given replies one after another and records what it was sent."""
+
+    name = "seq"
+
+    def __init__(self, *replies):
+        self.replies = list(replies)
+        self.calls = []
+
+    def complete(self, messages, *, max_tokens, temperature=0.1):
+        self.calls.append(messages)
+        reply = self.replies.pop(0)
+        return Completion(reply if isinstance(reply, str) else json.dumps(reply))
+
+
+class TestRobustness:
+    GOOD = {"answer": "Pet changed [C1].", "citations": ["C1"], "abstain": False}
+
+    def test_a_reply_that_is_not_json_gets_one_corrective_retry(self):
+        chat = SequenceChat("Sorry, here you go: {broken", self.GOOD)
+        retries = []
+        out = answer_question(
+            chat, "q?", ITEMS, truncated=False, max_tokens=50, on_retry=lambda: retries.append(1)
+        )
+        assert out.status == "answered" and len(chat.calls) == 2 and retries == [1]
+        assert "not one valid JSON object" in chat.calls[1][-1].content
+
+    def test_the_retry_is_bounded_to_one(self):
+        chat = SequenceChat("nope", "still nope", self.GOOD)
+        with pytest.raises(LLMBadOutput):
+            answer_question(chat, "q?", ITEMS, truncated=False, max_tokens=50)
+        assert len(chat.calls) == 2 and len(chat.replies) == 1
+
+    def test_a_good_first_reply_costs_no_retry(self):
+        chat = SequenceChat(self.GOOD)
+        retries = []
+        answer_question(
+            chat, "q?", ITEMS, truncated=False, max_tokens=50, on_retry=lambda: retries.append(1)
+        )
+        assert len(chat.calls) == 1 and retries == []
+
+    def test_summaries_retry_the_same_way(self, result):
+        good = {"summary": "Pet.id became an integer [C1].", "citations": ["C1"]}
+        chat = SequenceChat("???", good)
+        out = summarize_changes(
+            chat, "v1", "v2", result.changes, result.impacts, max_chars=20_000, max_tokens=50
+        )
+        assert out.status == "answered" and len(chat.calls) == 2
+
+    def test_a_refusal_with_no_text_is_a_polite_uncertain_not_an_error(self):
+        out = ask({"abstain": True, "citations": []})
+        assert out.status == "uncertain" and "do not contain enough" in out.text
+        assert ask({"answer": "", "citations": [], "abstain": True}).status == "uncertain"
+
+    def test_a_missing_text_without_an_abstention_is_still_bad_output(self):
+        with pytest.raises(LLMBadOutput):
+            ask({"citations": ["C1"], "abstain": False})
+
+    def test_the_prompt_tells_the_model_that_old_passages_may_be_out_of_date(self):
+        chat = SequenceChat({"answer": "ok [C1]", "citations": ["C1"], "abstain": False})
+        answer_question(chat, "q?", ITEMS, truncated=False, max_tokens=50)
+        assert "out of date" in chat.calls[0][0].content

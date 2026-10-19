@@ -34,6 +34,10 @@ class LLMUnavailable(SpecTraceError):
     status = 503
 
 
+class LLMAuthError(LLMUnavailable):
+    """The key was rejected. Trying another model would not help."""
+
+
 class LLMRateLimited(SpecTraceError):
     code = "llm_rate_limited"
     status = 429

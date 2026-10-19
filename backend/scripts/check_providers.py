@@ -22,12 +22,15 @@ def check(ai: AI) -> int:
     if ai.chat is not None:
         started = time.perf_counter()
         try:
+            # Room for models that think before they answer; a tiny limit would return nothing.
             out = ai.chat.complete(
-                [ChatMessage("user", "Reply with the single word: ok")], max_tokens=8, temperature=0
+                [ChatMessage("user", "Reply with the single word: ok")],
+                max_tokens=400,
+                temperature=0,
             )
             ms = (time.perf_counter() - started) * 1000
             print(
-                f"chat       ok   model={ai.chat.name}  {ms:.0f} ms  "
+                f"chat       ok   model={out.model or ai.chat.name}  {ms:.0f} ms  "
                 f"tokens in/out={out.prompt_tokens}/{out.completion_tokens}  "
                 f"reply length={len(out.text)}"
             )

@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     llm_timeout_seconds: float = 60.0
     llm_max_retries: int = 2
-    llm_max_output_tokens: int = 1200
+    # Models that think before answering spend part of this limit on the thinking.
+    llm_max_output_tokens: int = 3000
     # Characters of document text placed in one prompt.
     llm_context_chars: int = 24_000
     # Cost guards: calls per owner per hour and per process per day.

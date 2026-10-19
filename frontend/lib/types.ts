@@ -56,7 +56,8 @@ export interface Citation {
   file: string | null;
   line_start: number | null;
   line_end: number | null;
-  version: "a" | "b" | null;
+  /** "both" when the same passage reads identically in the two versions. */
+  version: "a" | "b" | "both" | null;
   via: string | null;
   similarity: number | null;
 }

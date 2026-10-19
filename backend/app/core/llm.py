@@ -23,6 +23,9 @@ class Completion:
     text: str
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
+    #: The model that actually answered. A router such as openrouter/free picks one per call.
+    model: str | None = None
+    finish_reason: str | None = None
 
 
 class ChatModel(Protocol):

@@ -23,7 +23,14 @@ import httpx
 
 from app.config import Settings
 from app.core.llm import ChatMessage, ChatModel, Completion, Embedder
-from app.errors import LLMBadOutput, LLMRateLimited, LLMTimeout, LLMUnavailable
+from app.errors import (
+    LLMAuthError,
+    LLMBadOutput,
+    LLMRateLimited,
+    LLMTimeout,
+    LLMUnavailable,
+    SpecTraceError,
+)
 
 log = logging.getLogger("spectrace")
 
@@ -77,7 +84,7 @@ def _post(
                     raise LLMBadOutput("The language model service returned unreadable data.")
                 return body
             if code in (401, 403):
-                raise LLMUnavailable("The language model service rejected the API key.")
+                raise LLMAuthError("The language model service rejected the API key.")
             if code == 429:
                 last = LLMRateLimited("The language model service is rate limiting requests.")
                 retry_after = response.headers.get("retry-after", "")
@@ -96,18 +103,28 @@ def _post(
 
 
 class OpenAICompatChat:
+    """Chat completions with an ordered list of models.
+
+    When a model is rate limited, down, missing or answers nothing usable, the next one is tried.
+    A rejected key stops at once, since another model would be rejected too. Free hosted models
+    are often congested for a while, so the list is what keeps the app answering.
+    """
+
     def __init__(
         self,
         base_url: str,
         api_key: str | None,
-        model: str,
+        model: str | list[str],
         *,
         timeout: float = 60.0,
         retries: int = 2,
         client: httpx.Client | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ):
-        self.name = model
+        self.models = [model] if isinstance(model, str) else list(model)
+        self.name = self.models[0] + (
+            f" (+{len(self.models) - 1} fallback)" if len(self.models) > 1 else ""
+        )
         self._url = f"{base_url}/chat/completions"
         self._key = api_key
         self._timeout = timeout
@@ -118,8 +135,40 @@ class OpenAICompatChat:
     def complete(
         self, messages: list[ChatMessage], *, max_tokens: int, temperature: float = 0.1
     ) -> Completion:
+        failures: list[SpecTraceError] = []
+        for index, model in enumerate(self.models):
+            last = index == len(self.models) - 1
+            try:
+                # With another model to fall back on, do not wait long for one that is struggling.
+                return self._one(
+                    model,
+                    messages,
+                    max_tokens,
+                    temperature,
+                    self._retries if last else min(self._retries, 1),
+                )
+            except LLMAuthError:
+                raise
+            except SpecTraceError as exc:
+                log.warning("model %s failed code=%s", model, exc.code)
+                failures.append(exc)
+        if len(failures) > 1 and all(isinstance(f, LLMRateLimited) for f in failures):
+            raise LLMRateLimited(
+                f"All {len(failures)} configured models are rate limited right now. "
+                "Try again in a minute."
+            )
+        raise failures[-1]
+
+    def _one(
+        self,
+        model: str,
+        messages: list[ChatMessage],
+        max_tokens: int,
+        temperature: float,
+        retries: int,
+    ) -> Completion:
         payload = {
-            "model": self.name,
+            "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -131,17 +180,31 @@ class OpenAICompatChat:
             self._key,
             payload,
             timeout=self._timeout,
-            retries=self._retries,
+            retries=retries,
             sleep=self._sleep,
         )
         try:
-            text = body["choices"][0]["message"]["content"]
+            choice = body["choices"][0]
+            text = choice["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMBadOutput("The language model returned no answer.") from exc
+        finish = choice.get("finish_reason") if isinstance(choice, dict) else None
         if not isinstance(text, str) or not text.strip():
+            if finish == "length":
+                # Reasoning models spend part of the limit thinking, silently, before they write.
+                raise LLMBadOutput(
+                    "The model used its whole output limit before it wrote an answer. Raise "
+                    "SPECTRACE_LLM_MAX_OUTPUT_TOKENS or choose a model that does not reason."
+                )
             raise LLMBadOutput("The language model returned an empty answer.")
+        if finish == "length":
+            # Cut off mid-sentence: for a JSON reply that means broken JSON.
+            raise LLMBadOutput("The model's reply was cut off by the output limit.")
         usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
-        return Completion(text, usage.get("prompt_tokens"), usage.get("completion_tokens"))
+        routed = body.get("model") if isinstance(body.get("model"), str) else model
+        return Completion(
+            text, usage.get("prompt_tokens"), usage.get("completion_tokens"), routed, finish
+        )
 
 
 class OpenAICompatEmbedder:
@@ -332,12 +395,13 @@ def build_ai(settings: Settings, client: httpx.Client | None = None) -> AI:
         if provider in KEY_REQUIRED and not key:
             log.warning("llm_provider=%s has no API key, so the language model is off", provider)
         else:
-            if not base or not settings.llm_model:
+            models = [m.strip() for m in (settings.llm_model or "").split(",") if m.strip()]
+            if not base or not models:
                 raise LLMUnavailable("The language model needs a base URL and a model name.")
             chat = OpenAICompatChat(
                 base,
                 key,
-                settings.llm_model,
+                models,
                 timeout=settings.llm_timeout_seconds,
                 retries=settings.llm_max_retries,
                 client=client,

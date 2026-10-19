@@ -8,3 +8,7 @@ test-results/
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# Local design notes (not published)
+DESIGN.md
+ACCESSIBILITY.md
