@@ -1,14 +1,16 @@
-from typing import Literal
+import json
+from typing import Annotated, Literal
 
 from pydantic import SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SPECTRACE_", env_file=".env", extra="ignore")
 
     database_url: str | None = None
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # A JSON list or a comma-separated string; hosting dashboards often get either.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     max_request_bytes: int = 12_000_000
     rate_limit_per_minute: int = 120
     rate_limit_heavy_per_minute: int = 10
@@ -42,6 +44,21 @@ class Settings(BaseSettings):
     embedding_model: str | None = None
     embedding_batch_size: int = 64
     embedding_max_chunks_per_run: int = 2000
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_origins(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if text.startswith("["):
+            try:
+                return json.loads(text)
+            except ValueError:
+                text = text.strip("[]")
+        # Strip quotes and a trailing slash: browsers send origins without one.
+        items = [part.strip().strip("\"'").rstrip("/") for part in text.split(",")]
+        return [item for item in items if item] or ["http://localhost:3000"]
 
     @field_validator("llm_base_url", "embedding_base_url")
     @classmethod
